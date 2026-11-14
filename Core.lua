@@ -314,8 +314,13 @@ local function Ago(t)
     return math.floor(d / 86400) .. " days ago"
 end
 
+-- The group key uses "|" separators, which WoW reads as escape codes in printed text.
+function ns.GroupLabel()
+    return (tostring(ns.groupKey):gsub("|", " / "))
+end
+
 local function ListCharacters()
-    Print("characters counted together (" .. tostring(ns.groupKey) .. "):")
+    Print("characters counted together (" .. ns.GroupLabel() .. "):")
     local names = {}
     for name in pairs(ns.group or {}) do names[#names + 1] = name end
     table.sort(names)
@@ -356,7 +361,7 @@ SlashCmdList["LISTINVENTORY"] = function(msg)
             Print("no character called " .. name .. " in this group. /li chars lists them.")
         end
     elseif cmd == "status" then
-        Print("group " .. tostring(ns.groupKey) .. ", " .. #ns.live.stacks .. " stacks, " .. ns.live.free .. "/" .. ns.live.slots .. " slots free")
+        Print("group " .. ns.GroupLabel() .. ", " .. #ns.live.stacks .. " stacks, " .. ns.live.free .. "/" .. ns.live.slots .. " slots free")
         Print("replace bags: " .. tostring(ns.db.replaceBags) .. ", tooltip counts: " .. tostring(ns.db.tooltip))
         Print("this character's bank last seen: " .. Ago(ns.record.bankSeen))
         if ns.UI then ns.UI:Diagnose() end

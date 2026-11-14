@@ -44,6 +44,19 @@ for action, keys in pairs(UI.KEYS) do
     end
 end
 
+-- capture = true: the window reads gamepad presses itself and keeps them from the game (combat).
+-- capture = false: presses go on to the override bindings. Clients without
+-- SetPropagateGamePadButton only get gamepad input on the window while capturing.
+local function SetPadCapture(frame, capture)
+    if not frame.EnableGamePadButton then return end
+    if frame.SetPropagateGamePadButton then
+        frame:EnableGamePadButton(true)
+        frame:SetPropagateGamePadButton(not capture)
+    else
+        frame:EnableGamePadButton(capture)
+    end
+end
+
 local GLYPH_FALLBACK = { PAD1 = "A", PAD2 = "B", PAD3 = "X", PAD4 = "Y", PADLSHOULDER = "LB", PADRSHOULDER = "RB" }
 local function Glyph(key)
     local text = GetBindingText and GetBindingText(key)
@@ -340,8 +353,7 @@ function UI:Init()
     -- During combat the gamepad is read directly (see the top of this file). Out of combat the
     -- presses propagate on to the override bindings.
     if frame.EnableGamePadButton then
-        frame:EnableGamePadButton(true)
-        frame:SetPropagateGamePadButton(true)
+        SetPadCapture(frame, false)
         frame:SetScript("OnGamePadButtonDown", function(_, key)
             if not InCombatLockdown() or not UI.focused then return end
             local action = PAD_ACTIONS[key]
@@ -575,9 +587,9 @@ function UI:OnCombat(starting)
     if starting then
         -- Last chance before lockdown: drop the bindings and read the gamepad directly instead.
         self:ClearBindings()
-        if self.frame.SetPropagateGamePadButton then self.frame:SetPropagateGamePadButton(false) end
+        SetPadCapture(self.frame, true)
     else
-        if self.frame.SetPropagateGamePadButton then self.frame:SetPropagateGamePadButton(true) end
+        SetPadCapture(self.frame, false)
         self:Render()
     end
 end
@@ -780,5 +792,6 @@ function UI:Diagnose()
     local b = self.rows and self.rows[1] and self.rows[1].item
     ns.Print("item button template: " .. (b and (b.GetObjectType and b:GetObjectType() or "?") or "missing")
         .. ", gamepad input: " .. tostring(self.frame and self.frame.EnableGamePadButton ~= nil)
+        .. ", gamepad propagation: " .. tostring(self.frame and self.frame.SetPropagateGamePadButton ~= nil)
         .. ", bindings active: " .. tostring(self.bound == true))
 end
