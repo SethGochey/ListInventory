@@ -3,7 +3,7 @@ local addonName, ns = ...
 local Data = ns.Data
 
 ns.defaults = {
-    replaceBags = true, -- open the list instead of the default bags
+    replaceBags = true, -- open the list with the game's bags
     tooltip = true,     -- add counts from all characters to item tooltips
     view = "bags",      -- "bags" or "all"
 }
@@ -263,6 +263,9 @@ local EVENTS = {
     "GET_ITEM_INFO_RECEIVED",
     "PLAYER_MONEY",
     "CURSOR_CHANGED",
+    "GAME_PAD_ACTIVE_CHANGED",
+    "GAME_PAD_CONNECTED",
+    "GAME_PAD_DISCONNECTED",
     "PLAYER_REGEN_DISABLED",
     "PLAYER_REGEN_ENABLED",
 }
@@ -294,7 +297,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
     elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         if ns.UI then ns.UI:OnCombat(event == "PLAYER_REGEN_DISABLED") end
         return
-    elseif event == "CURSOR_CHANGED" or event == "PLAYER_MONEY" then
+    elseif event == "CURSOR_CHANGED" or event == "PLAYER_MONEY" or event:find("^GAME_PAD") then
         if ns.UI then ns.UI:Render() end
         return
     end
@@ -343,7 +346,7 @@ SlashCmdList["LISTINVENTORY"] = function(msg)
         if ns.UI then ns.UI:Toggle() end
     elseif cmd == "default" then
         ns.db.replaceBags = not ns.db.replaceBags
-        Print(ns.db.replaceBags and "the bag key now opens the list." or "the bag key now opens the default bags. /li still opens the list.")
+        Print(ns.db.replaceBags and "the list now opens with your bags." or "the list no longer opens with your bags. /li still opens it.")
     elseif cmd == "tooltip" then
         ns.db.tooltip = not ns.db.tooltip
         Print("tooltip counts " .. (ns.db.tooltip and "on" or "off"))
@@ -362,19 +365,22 @@ SlashCmdList["LISTINVENTORY"] = function(msg)
         end
     elseif cmd == "status" then
         Print("group " .. ns.GroupLabel() .. ", " .. #ns.live.stacks .. " stacks, " .. ns.live.free .. "/" .. ns.live.slots .. " slots free")
-        Print("replace bags: " .. tostring(ns.db.replaceBags) .. ", tooltip counts: " .. tostring(ns.db.tooltip))
+        Print("opens with bags: " .. tostring(ns.db.replaceBags) .. ", tooltip counts: " .. tostring(ns.db.tooltip))
         Print("this character's bank last seen: " .. Ago(ns.record.bankSeen))
         if ns.UI then ns.UI:Diagnose() end
+    elseif cmd == "probe" then
+        if ns.UI then ns.UI:Probe() end
     elseif cmd == "debug" then
         ns.debug = not ns.debug
         Print("debug " .. (ns.debug and "on" or "off"))
     else
         Print("commands:")
         print("  /li - open or close the list")
-        print("  /li default - switch the bag key between the list and the default bags")
+        print("  /li default - open the list with your bags, or not")
         print("  /li tooltip - item tooltip counts on/off")
         print("  /li chars - characters counted together")
         print("  /li forget <name> - stop counting a deleted or transferred character")
         print("  /li status - diagnostics")
+        print("  /li probe - save controller diagnostics (test build)")
     end
 end

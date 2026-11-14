@@ -1,6 +1,8 @@
 # ListInventory
 
-A World of Warcraft: Forever addon that replaces the bags with a scrollable list of your items, built to be driven with a controller.
+A World of Warcraft: Forever addon that shows your bags as a scrollable list of items, built to be driven with a controller.
+
+> **Test build.** The list currently opens *beside* the game's bag window rather than replacing it, while the controller integration with Forever's gamepad mode is worked out. See [Controller](#controller).
 
 - **One row per item**, sorted by name, with two counts: how many are in this character's **Bags**, and the **Total** across this character's bank and every alt on the same realm, ruleset and faction. If you're farming Linen Cloth, the Linen row tells you at a glance how much you have everywhere.
 - **Stacks sub-menu.** Selecting an item that's spread over several stacks opens a list of those stacks (bag and slot, count each), so you can pick the exact one.
@@ -13,7 +15,11 @@ Requires the World of Warcraft: Forever client (interface 16001).
 
 ## Controller
 
-When you open the bags with your bag button, the list takes the controller:
+The list opens and closes with the game's bags, however they are opened: the bag button, the LB+RB+B chord, the Start-button radial menu, or a vendor, bank or mailbox.
+
+**In Forever's gamepad mode**, the game's own cursor drives the list. Move it onto a row and the list follows it; push past the top or bottom row and the list scrolls. A, X, Y and B do what the game does for that button. Getting this right is what the current test build is for: `/li probe` saves diagnostics to send back.
+
+**With gamepad mode off** (controller glyphs shown but the game's cursor not in use), the list takes the controller itself:
 
 | Button | In the list | In a stacks sub-menu |
 | --- | --- | --- |
@@ -27,13 +33,13 @@ When you open the bags with your bag button, the list takes the controller:
 
 The selected item's tooltip, with its per-character counts, sits next to the window.
 
-When a vendor, the bank or the mailbox opens the bags for you, the list opens without taking the controller, so you can keep using that window. Press your bag button to move the controller into the list, and B to give it back.
+B closes the list and the bags together.
 
-**In combat** the game doesn't let addons change controller bindings, so the list reads the controller directly instead. Moving, stacks, pick up, place and destroy still work. **Using** an item with A has to wait until combat ends, but clicking it with the mouse still works.
+**In combat** (gamepad mode off) the game doesn't let addons change controller bindings, so the list reads the controller directly instead. Moving, stacks, pick up, place and destroy still work. **Using** an item with A has to wait until combat ends, but clicking it with the mouse still works.
 
 ## Mouse
 
-Click a row with several stacks to open its stacks. Click an item icon to do exactly what clicking it in the default bags does: right-click to use, sell or bank it, left-click to pick it up, Shift-click to link or split. Right-click a stacks list to go back. Drag the title bar to move the window. Esc closes it.
+Click a row with several stacks to open its stacks. Click an item icon to do exactly what clicking it in the default bags does: right-click to use, sell or bank it, left-click to pick it up, Shift-click to link or split. Right-click a stacks list to go back. Drag the title bar to move the window when it's opened with `/li`; with the bags it sits beside the bag window. Esc closes it (with the bags, Esc closes the bags and the list together).
 
 ## Counting your alts
 
@@ -44,7 +50,8 @@ Each character's bags are saved whenever they change. Its bank is saved each tim
 | Command | What it does |
 | --- | --- |
 | `/li` | Open or close the list (also `/listinv`) |
-| `/li default` | Switch the bag button between the list and the default bags. `/li` still opens the list. |
+| `/li default` | Turn opening the list with your bags on or off. `/li` still opens it. |
+| `/li probe` | Test build: save controller diagnostics (names and call paths only) to the saved settings file |
 | `/li tooltip` | Turn the tooltip counts on or off |
 | `/li chars` | List the characters counted together, and when each bag and bank was last seen |
 | `/li forget <name>` | Stop counting a deleted or transferred character |
@@ -67,7 +74,7 @@ You should end up with `Interface/AddOns/ListInventory/ListInventory.toc`. Resta
 1. Type `/console scriptErrors 1` so Lua errors show on screen, then `/reload`.
 2. Type `/li status` and include its output when you open an issue.
 
-If something goes wrong with the bags, `/li default` gives you the default bags back straight away.
+If the list gets in the way, `/li default` stops it opening with your bags.
 
 ## Development
 

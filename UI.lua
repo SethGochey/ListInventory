@@ -2,11 +2,18 @@
 --
 -- How item actions stay "real": each row that stands for one stack holds a stock
 -- ContainerFrameItemButton for that bag and slot, so mouse clicks do exactly what they do in
--- the default bags (use, equip, sell, bank, trade, mail, split, link...). The gamepad reaches
--- the same buttons through override bindings that click the selected row's button, which keeps
--- the click secure. Override bindings can't change during combat, so in combat the window
--- reads the gamepad directly instead: navigation, stacks, pick up and destroy still work, but
--- using an item from the gamepad has to wait for the end of combat (mouse clicks still work).
+-- the default bags (use, equip, sell, bank, trade, mail, split, link...).
+--
+-- The controller, two ways:
+-- * Forever's gamepad mode (its own override bindings on every pad button, to
+--   InputFunctionBindingButton_*): the game's cursor (SmartNavigation) is left in charge. The
+--   list follows the cursor when it is on a row, and scrolls when it is pushed past the end.
+-- * Otherwise: override bindings of ours click the selected row's item button (secure) or our
+--   navigation buttons. Those can't change in combat, so in combat the window reads the pad
+--   directly instead (using an item from the pad then waits for the end of combat).
+--
+-- The list opens and closes with the game's bag windows (watched, never replaced), so every way
+-- the game opens the bags opens the list too.
 local _, ns = ...
 local Data = ns.Data
 
@@ -294,7 +301,8 @@ function UI:Init()
         ns.db.point = { point, relPoint, x, y }
     end)
     frame:Hide()
-    tinsert(UISpecialFrames, "ListInventoryFrame")
+    -- Not in UISpecialFrames: in Forever, the pad's B runs CloseSpecialWindows, which would run
+    -- tainted with an addon frame in that list. Escape is an override binding instead (below).
     self.frame = frame
     self:RestorePosition()
 
@@ -349,20 +357,24 @@ function UI:Init()
 
     self.nav = {}
     for action in pairs(self.KEYS) do self.nav[action] = MakeNavButton(action) end
+    self.nav.close = MakeNavButton("close")
 
     -- During combat the gamepad is read directly (see the top of this file). Out of combat the
     -- presses propagate on to the override bindings.
     if frame.EnableGamePadButton then
-        SetPadCapture(frame, false)
         frame:SetScript("OnGamePadButtonDown", function(_, key)
-            if not InCombatLockdown() or not UI.focused then return end
+            if not InCombatLockdown() or not UI.focused or UI.gamepadMode then return end
             local action = PAD_ACTIONS[key]
             if not action then return end
             UI:Do(action, true)
             if REPEATS[action] then UI:StartRepeat(action, true) end
         end)
         frame:SetScript("OnGamePadButtonUp", function() UI:StopRepeat() end)
+        -- (setting a gamepad script switches the frame's gamepad input on by itself: off again,
+        -- or the window would swallow every press while it is shown)
+        SetPadCapture(frame, false)
     end
+    frame:SetScript("OnUpdate", function() UI:FollowCursor() end)
 
     frame:SetScript("OnShow", function()
         PlaySound(SOUNDKIT and SOUNDKIT.IG_BACKPACK_OPEN or 862)
@@ -374,10 +386,11 @@ function UI:Init()
         UI:StopRepeat()
         UI:ClearBindings()
         UI.mode, UI.confirm, UI.focused, UI.openedBy = "list", nil, false, nil
+        UI:StopFollowing()
         if GameTooltip:GetOwner() and GameTooltip:GetOwner():GetParent() == UI.list then GameTooltip:Hide() end
     end)
 
-    self:InstallBagHooks()
+    self:WatchBagFrames()
 end
 
 function UI:RestorePosition()
@@ -485,8 +498,12 @@ function UI:RenderHint()
         self.hint:SetText(self.message)
         return
     end
+    if self.gamepadMode then
+        self.hint:SetText("|cffaaaaaaTest build: the game's cursor drives the list. /li probe saves diagnostics.|r")
+        return
+    end
     if not self.focused then
-        self.hint:SetText("|cffaaaaaaPress your bag key to use the list with the controller.|r")
+        self.hint:SetText("")
         return
     end
     if self.mode == "confirm" then
@@ -561,11 +578,24 @@ end
 -- item button for use and pick up, otherwise our own (insecure) navigation buttons.
 function UI:UpdateBindings()
     if InCombatLockdown() then return end
-    if not (self.frame:IsShown() and self.focused) then
+    if not self.frame:IsShown() then
         self:ClearBindings()
         return
     end
     ClearOverrideBindings(self.frame)
+    self.bound = false
+    -- Forever's gamepad mode puts its own override bindings on the pad: with ours cleared, what
+    -- PAD1 does now tells whether it is on.
+    local wasGamepad = self.gamepadMode
+    self.gamepadMode = (GetBindingAction("PAD1", true) or ""):find("InputFunctionBindingButton", 1, true) ~= nil
+    if wasGamepad ~= self.gamepadMode then self:RenderHint() end
+    -- Escape closes a list opened on its own (/li). With the bags, Escape is the game's: it
+    -- closes the bags, and the list with them.
+    if self.openedBy == nil then
+        SetOverrideBindingClick(self.frame, true, "ESCAPE", self.nav.close:GetName(), "LeftButton")
+        self.bound = true
+    end
+    if not self.focused or self.gamepadMode then return end
     local e = self:Selected()
     local row = e and e.stack and self:VisibleRow(self.sel)
     local itemButton = row and self.mode ~= "confirm" and row.item:GetName()
@@ -585,9 +615,10 @@ end
 function UI:OnCombat(starting)
     if not self.frame then return end
     if starting then
-        -- Last chance before lockdown: drop the bindings and read the gamepad directly instead.
+        -- Last chance before lockdown: drop the bindings and read the gamepad directly instead
+        -- (not in Forever's gamepad mode: the game's cursor keeps the pad).
         self:ClearBindings()
-        SetPadCapture(self.frame, true)
+        if not self.gamepadMode then SetPadCapture(self.frame, true) end
     else
         SetPadCapture(self.frame, false)
         self:Render()
@@ -661,14 +692,15 @@ function UI:Do(action, fromPad)
         elseif self.mode == "stacks" then
             self:LeaveStacks()
             self:Refresh()
-        elseif self.openedBy then
-            -- Opened by another window (vendor, bank, mail): hand the controller back to it.
-            self.focused = false
-            GameTooltip:Hide()
-            self:Render()
         else
-            self.frame:Hide()
+            self:Do("close")
         end
+    elseif action == "close" then
+        if self.openedBy == "bags" and CloseAllBags then
+            -- Closing the game's bags closes the list with them.
+            pcall(CloseAllBags)
+        end
+        if self.frame:IsShown() then self.frame:Hide() end
     elseif action == "accept" then
         if self.mode == "confirm" then
             self:DestroyConfirmed()
@@ -720,19 +752,19 @@ end
 ---------------------------------------------------------------------------------------------
 -- Opening and closing, and taking over the bag keys
 ---------------------------------------------------------------------------------------------
--- `opener` is the window that asked for the bags (vendor, bank, mail...), or nil when the
--- player did. Only a player-opened list takes the controller straight away.
+-- `opener` is "bags" when the list opened with the game's bags, nil when the player opened it
+-- on its own (/li).
 function UI:Open(opener)
     if not self.frame then return end
     if self.frame:IsShown() then return end
     self.openedBy = opener
-    self.focused = opener == nil
+    self.focused = true
     self.mode, self.sel, self.offset = "list", 1, 0
+    self:Place()
     self.frame:Show()
 end
 
--- `opener` nil closes the list. A window closing (vendor, bank...) passes itself and only
--- closes the list if it was the one that opened it.
+-- `opener` nil closes the list; "bags" closes it only if it opened with the bags.
 function UI:Close(opener)
     if not (self.frame and self.frame:IsShown()) then return end
     if opener ~= nil and opener ~= self.openedBy then return end
@@ -742,50 +774,207 @@ end
 function UI:Toggle()
     if not self.frame then return end
     if self.frame:IsShown() then
-        if self.focused then
-            self.frame:Hide()
-        else
-            self.focused = true
-            self:Render()
-        end
+        self.frame:Hide()
     else
         self:Open(nil)
     end
 end
 
-function UI:InstallBagHooks()
-    local orig = {}
-    self.orig = orig
-    local function Replace(name, fn)
-        local original = _G[name]
-        if type(original) ~= "function" then return end
-        orig[name] = original
-        _G[name] = function(...)
-            if ns.db.replaceBags then return fn(original, ...) end
-            return original(...)
+-- With the bags: beside the game's bag window. On its own: where the player last dragged it.
+function UI:Place()
+    local bags = self:ShownBagFrame()
+    if self.openedBy == "bags" and bags then
+        self.frame:ClearAllPoints()
+        self.frame:SetPoint("TOPRIGHT", bags, "TOPLEFT", -8, 0)
+    else
+        self:RestorePosition()
+    end
+end
+
+---------------------------------------------------------------------------------------------
+-- The game's bag windows, watched (never replaced: the radial menu, the bag chord, the bag
+-- keys and the vendor all open these, and replacing the game's functions taints them)
+---------------------------------------------------------------------------------------------
+UI.bagFrames = {}
+UI.bagOpens = {}
+
+function UI:ShownBagFrame()
+    for _, f in ipairs(self.bagFrames) do
+        if f:IsShown() then return f end
+    end
+end
+
+local function BagFrameShown(f)
+    -- Diagnostics for /li probe: where the call that opened the bags came from (names only).
+    local stack = debugstack and debugstack(3, 12, 0) or ""
+    table.insert(UI.bagOpens, 1, { frame = f:GetName(), time = date and date("%H:%M:%S"), stack = stack })
+    if #UI.bagOpens > 6 then table.remove(UI.bagOpens) end
+    if ns.db.replaceBags then
+        if UI.frame:IsShown() then
+            if UI.openedBy == "bags" then UI:Place() end
+        else
+            UI:Open("bags")
         end
     end
+end
 
-    Replace("ToggleAllBags", function() UI:Toggle() end)
-    Replace("ToggleBackpack", function() UI:Toggle() end)
-    Replace("OpenAllBags", function(_, frame) UI:Open(frame or "auto") end)
-    Replace("OpenBackpack", function() UI:Open("auto") end)
-    Replace("CloseAllBags", function(original, frame, ...)
-        UI:Close(frame)
-        return original(frame, ...) -- still closes any default bank bag windows
-    end)
-    Replace("CloseBackpack", function(original, ...)
-        UI:Close()
-        return original(...)
-    end)
-    Replace("ToggleBag", function(original, id, ...)
-        if ns.IsPlayerBag(id) then return UI:Toggle() end
-        return original(id, ...)
-    end)
-    Replace("OpenBag", function(original, id, ...)
-        if ns.IsPlayerBag(id) then return UI:Open("auto") end
-        return original(id, ...)
-    end)
+local function BagFrameHidden()
+    if UI:ShownBagFrame() then return end
+    UI:Close("bags")
+end
+
+local function Watch(f)
+    if not f or f.listInventoryWatched or not f.HookScript then return end
+    f.listInventoryWatched = true
+    table.insert(UI.bagFrames, f)
+    f:HookScript("OnShow", BagFrameShown)
+    f:HookScript("OnHide", BagFrameHidden)
+end
+
+function UI:WatchBagFrames()
+    Watch(_G.ContainerFrameCombinedBags)
+    for i = 1, NUM_CONTAINER_FRAMES or 13 do
+        local f = _G["ContainerFrame" .. i]
+        -- Only frames that show player bags; bank bag windows are left alone.
+        if f then
+            f:HookScript("OnShow", function(self)
+                if ns.IsPlayerBag(self:GetID()) then BagFrameShown(self) end
+            end)
+            f:HookScript("OnHide", BagFrameHidden)
+            table.insert(self.bagFrames, f)
+        end
+    end
+end
+
+---------------------------------------------------------------------------------------------
+-- Forever's gamepad mode: follow the game's cursor
+---------------------------------------------------------------------------------------------
+local held = {}
+
+local function RowOf(button)
+    if not button then return nil end
+    for i, row in ipairs(UI.rows) do
+        if button == row or button == row.item then return i end
+    end
+end
+
+local function CursorTarget(row)
+    return row.holder:IsShown() and row.item or row
+end
+
+function UI:StopFollowing()
+    wipe(held)
+    self.cursorOnList = false
+end
+
+function UI:FollowCursor()
+    if not self.gamepadMode then return end
+    local nav = _G.SmartNavigation
+    if not (nav and nav.GetCurrentButton) then return end
+    local ok, current = pcall(nav.GetCurrentButton, nav)
+    local i = ok and RowOf(current)
+    self.cursorOnList = i ~= nil
+    if not i then
+        wipe(held)
+        return
+    end
+    local index = self.offset + i
+    if index ~= self.sel then
+        self.sel = index
+        self:Render()
+    end
+    -- Pushed past the first or last visible row: scroll, and put the cursor back on that row.
+    for key, dir in pairs({ PADDUP = -1, PADDDOWN = 1 }) do
+        local down = IsKeyDown and IsKeyDown(key) or false
+        local fresh = down and not held[key]
+        held[key] = down
+        if fresh and ((dir == 1 and i == VISIBLE) or (dir == -1 and i == 1)) and self.entries[index + dir] then
+            self.sel = index + dir
+            self:Render()
+            local row = self:VisibleRow(self.sel)
+            if row and nav.SelectButton then pcall(nav.SelectButton, nav, CursorTarget(row)) end
+        end
+    end
+end
+
+---------------------------------------------------------------------------------------------
+-- /li probe: names and call paths only, saved to ListInventoryDB.probe
+---------------------------------------------------------------------------------------------
+local function FunctionNames(t)
+    local names, seen = {}, {}
+    local function add(tbl)
+        if type(tbl) ~= "table" then return end
+        for k, v in pairs(tbl) do
+            if type(k) == "string" and type(v) == "function" and not seen[k] then
+                seen[k] = true
+                names[#names + 1] = k
+            end
+        end
+    end
+    if type(t) ~= "table" then return nil end
+    add(t)
+    local mt = getmetatable(t)
+    if mt and type(mt.__index) == "table" then add(mt.__index) end
+    table.sort(names)
+    return names
+end
+
+local function FieldNames(t)
+    if type(t) ~= "table" then return nil end
+    local names = {}
+    for k, v in pairs(t) do
+        if type(k) == "string" then names[#names + 1] = k .. " (" .. type(v) .. ")" end
+    end
+    table.sort(names)
+    return names
+end
+
+function UI:Probe()
+    local p = { time = date and date("%Y-%m-%d %H:%M:%S") }
+    if GetBuildInfo then p.build = table.concat({ tostringall(GetBuildInfo()) }, " ") end
+    p.gamepadMode = self.gamepadMode
+    p.pad1 = GetBindingAction("PAD1", true)
+    p.pad2 = GetBindingAction("PAD2", true)
+    p.paddown = GetBindingAction("PADDDOWN", true)
+    p.gamePadEnabled = C_GamePad and C_GamePad.IsEnabled and C_GamePad.IsEnabled()
+    local nav = _G.SmartNavigation
+    p.smartNavigation = FunctionNames(nav)
+    p.gamepadModeFields = FieldNames(_G.GamepadMode)
+    p.frameControlsManager = FunctionNames(_G.GamepadMode and GamepadMode.FrameControlsManager)
+    local globals = {}
+    for k, v in pairs(_G) do
+        if type(k) == "string" and (k:find("SmartNav") or k:find("InputFunction") or k:find("Radial")
+            or k:find("GamePad") or k:find("Gamepad")) then
+            globals[#globals + 1] = k .. " (" .. type(v) .. ")"
+        end
+    end
+    table.sort(globals)
+    p.globals = globals
+    p.bagFrames = {}
+    for _, f in ipairs(self.bagFrames) do p.bagFrames[#p.bagFrames + 1] = (f:GetName() or "?") .. (f:IsShown() and " shown" or "") end
+    p.bagOpens = self.bagOpens
+    p.listShown = self.frame:IsShown()
+    p.cursorOnList = self.cursorOnList
+    if nav and nav.GetCurrentButton then
+        local ok, b = pcall(nav.GetCurrentButton, nav)
+        p.cursorButton = ok and b and b.GetName and (b:GetName() or "unnamed") or tostring(ok and b)
+    end
+    -- Can the game's cursor be put on a row of ours?
+    local row = self.frame:IsShown() and self.rows[1]:IsShown() and self.rows[1]
+    if row and nav and nav.SelectButton then
+        local ok, err = pcall(nav.SelectButton, nav, CursorTarget(row))
+        local ok2, b = pcall(nav.GetCurrentButton, nav)
+        p.selectTest = { called = ok, err = not ok and tostring(err) or nil,
+            landed = ok2 and b == CursorTarget(row) or false }
+    end
+    ns.db.probe = p
+    ns.Print(("probe saved: %d cursor functions, %d manager functions, %d globals, %d bag opens recorded.")
+        :format(p.smartNavigation and #p.smartNavigation or 0, p.frameControlsManager and #p.frameControlsManager or 0,
+            #globals, #self.bagOpens))
+    if p.selectTest then
+        ns.Print("cursor test: " .. (p.selectTest.landed and "the game's cursor moved onto the list." or "the game's cursor could not be moved onto the list."))
+    end
+    ns.Print("Type /reload, then send WTF/Account/<account>/SavedVariables/ListInventory.lua")
 end
 
 function UI:Diagnose()
@@ -793,5 +982,7 @@ function UI:Diagnose()
     ns.Print("item button template: " .. (b and (b.GetObjectType and b:GetObjectType() or "?") or "missing")
         .. ", gamepad input: " .. tostring(self.frame and self.frame.EnableGamePadButton ~= nil)
         .. ", gamepad propagation: " .. tostring(self.frame and self.frame.SetPropagateGamePadButton ~= nil)
-        .. ", bindings active: " .. tostring(self.bound == true))
+        .. ", bindings active: " .. tostring(self.bound == true)
+        .. ", gamepad mode: " .. tostring(self.gamepadMode == true)
+        .. ", bag windows watched: " .. #self.bagFrames)
 end
