@@ -2,7 +2,7 @@
 
 A World of Warcraft: Forever addon that shows your bags as a scrollable list of items, built to be driven with a controller.
 
-> **Test build.** The list currently opens *beside* the game's bag window rather than replacing it, while the controller integration with Forever's gamepad mode is worked out. See [Controller](#controller).
+> **Test build.** The list replaces the game's bag window by sitting over it while it's hidden, and drives Forever's controller cursor through it. See [Controller](#controller).
 
 - **One row per item**, sorted by name, with two counts: how many are in this character's **Bags**, and the **Total** across this character's bank and every alt on the same realm, ruleset and faction. If you're farming Linen Cloth, the Linen row tells you at a glance how much you have everywhere.
 - **Stacks sub-menu.** Selecting an item that's spread over several stacks opens a list of those stacks (bag and slot, count each), so you can pick the exact one.
