@@ -3,6 +3,8 @@ name: Release
 # Pushing a tag like v1.0.0 builds the addon zip with the BigWigs packager, attaches it to a
 # GitHub release, and uploads it to CurseForge, Wago and WoWInterface for every site whose
 # project ID is in ListInventory.toc and whose API token secret is set.
+# Tags work on any branch: a tag push runs the workflow file from the tagged commit, so a
+# feature branch can be tagged (for example v0.1.0-beta) to test a build before merging.
 on:
   push:
     tags:
