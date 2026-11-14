@@ -423,12 +423,15 @@ local function ShowItemButton(row, s)
     row.holder:SetID(s.bag)
     b:SetID(s.slot)
     if b.SetBagID then pcall(b.SetBagID, b, s.bag) end
-    SetItemButtonTexture(b, s.icon)
-    SetItemButtonCount(b, s.count or 0)
-    SetItemButtonDesaturated(b, s.locked)
+    if SetItemButtonTexture then pcall(SetItemButtonTexture, b, s.icon) end
+    if SetItemButtonCount then pcall(SetItemButtonCount, b, s.count or 0) end
+    if SetItemButtonDesaturated then pcall(SetItemButtonDesaturated, b, s.locked) end
     if SetItemButtonQuality then pcall(SetItemButtonQuality, b, s.quality, s.link) end
     row.holder:Show()
-    row.icon:Hide()
+    -- Our own icon under the game's slot button: it shows whether or not the button draws.
+    row.icon:SetTexture(s.icon)
+    row.icon:SetShown(s.icon ~= nil)
+    row.icon:SetDesaturated(s.locked and true or false)
 end
 
 function UI:Render()
@@ -485,7 +488,8 @@ function UI:Render()
 
     self.frame.title:SetText("Inventory - " .. (ns.charName or ""))
     self.scrollText:SetText(n > VISIBLE and ((self.offset + 1) .. "-" .. math.min(n, self.offset + VISIBLE) .. " of " .. n) or "")
-    self.money:SetText(GetCoinTextureString and GetCoinTextureString(GetMoney()) or "")
+    local coins = (C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString) or GetCoinTextureString
+    self.money:SetText(coins and coins(GetMoney()) or "")
     self.free:SetText(ns.live.free .. "/" .. ns.live.slots .. " free" .. (ns.bankOpen and "  |cff9999ff(bank open)|r" or ""))
     self:RenderHint()
 
@@ -985,4 +989,21 @@ function UI:Diagnose()
         .. ", bindings active: " .. tostring(self.bound == true)
         .. ", gamepad mode: " .. tostring(self.gamepadMode == true)
         .. ", bag windows watched: " .. #self.bagFrames)
+    -- Why the game's slot button might not draw inside a row
+    local row = self.rows and self.rows[1]
+    if b and row then
+        local ok, text = pcall(function()
+            local icon
+            for _, candidate in ipairs({ b.icon, b.Icon, b:GetName() and _G[b:GetName() .. "IconTexture"] }) do
+                if type(candidate) == "table" and candidate.GetTexture then icon = candidate break end
+            end
+            local w, h = b:GetSize()
+            return ("slot button: shown %s, visible %s, alpha %s, size %sx%s, scale %s, points %s, holder visible %s, icon %s, GetBagID %s, bag %s slot %s")
+                :format(tostring(b:IsShown()), tostring(b:IsVisible()), tostring(b:GetAlpha()), tostring(w), tostring(h),
+                    tostring(b:GetScale()), tostring(b:GetNumPoints()), tostring(row.holder:IsVisible()),
+                    tostring(icon and icon:GetTexture()), tostring(b.GetBagID ~= nil),
+                    tostring(row.holder:GetID()), tostring(b:GetID()))
+        end)
+        ns.Print(ok and text or ("slot button: could not inspect (" .. tostring(text) .. ")"))
+    end
 end
