@@ -288,11 +288,13 @@ local function HookTooltips()
             local link = data and data.hyperlink
             if not link and tooltip.GetItem then link = select(2, tooltip:GetItem()) end
             AddCounts(tooltip, link)
+            if ns.Gamepad then ns.Gamepad:OnItemTooltip(tooltip) end
         end)
     else
         for _, tooltip in ipairs({ GameTooltip, ItemRefTooltip }) do
             tooltip:HookScript("OnTooltipSetItem", function(self)
                 AddCounts(self, select(2, self:GetItem()))
+                if ns.Gamepad then ns.Gamepad:OnItemTooltip(self) end
             end)
         end
     end

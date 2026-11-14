@@ -234,6 +234,7 @@ function GP:Tick()
         end
     end
     if UI.gamepadMode then self:Follow() end
+    self:TakeTooltip()
 end
 
 -- The list out of the way (invisible, no mouse) while the game's grid has the held item.
@@ -269,23 +270,29 @@ end
 function GP:Release()
     self:Clear()
     self.placed, self.retries, self.holding = false, 0, nil
+    self.tipHidden = false
+    Fade(GameTooltip, false)
     self:ShowList(true)
     self:UpdateFade()
     self.stackIndex = nil
 end
 
--- The game's tooltip for a hidden slot under its cursor: placed beside the list as it is
--- anchored, before it ever draws over the hidden slot.
-local anchoring = false
-local function PlaceTooltip(tooltip, owner)
-    if anchoring or not GP.touched[owner] or not GP:ShouldHide() then return end
-    anchoring = true
-    tooltip:SetOwner(owner, "ANCHOR_NONE")
-    anchoring = false
-    tooltip:ClearAllPoints()
-    tooltip:SetPoint("TOPRIGHT", UI.frame, "TOPLEFT", -4, 0)
+-- The game's tooltip for a hidden slot under its cursor would show over that slot for a frame
+-- before the list takes it over beside itself. It is faded out (an animation of ours: the
+-- tooltip itself is never touched from the game's tooltip code, which would taint it) until
+-- the list has taken it, on the next Tick.
+function GP:OnItemTooltip(tooltip)
+    if tooltip ~= GameTooltip or not self:ShouldHide() then return end
+    local owner = tooltip:GetOwner()
+    if owner and self.touched[owner] then
+        Fade(GameTooltip, true)
+        self.tipHidden = true
+    end
 end
 
-if GameTooltip and hooksecurefunc then
-    hooksecurefunc(GameTooltip, "SetOwner", PlaceTooltip)
+function GP:TakeTooltip()
+    if not self.tipHidden then return end
+    self.tipHidden = false
+    UI:UpdateTooltip()
+    Fade(GameTooltip, false)
 end

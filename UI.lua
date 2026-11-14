@@ -594,9 +594,6 @@ end
 
 function UI:UpdateTooltip()
     if not self.focused then return end
-    -- Gamepad UI steering: the game shows the tooltip for the slot under its cursor (placed
-    -- beside the list as it opens, Gamepad.lua); a second one from here would only flicker.
-    if self.gamepadMode and ns.Gamepad and ns.Gamepad.chain then return end
     local e = self:Selected()
     local row = e and self:VisibleRow(self.sel)
     if not row or (e.stack and e.stack.empty) or e.kind == "empty" then
