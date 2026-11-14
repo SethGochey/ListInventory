@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: ListInventory
 ## Notes: Replaces the bags with a controller-friendly list of your items, with counts across all your characters.
-## Author: SethGochey
+## Author: Umrad
 ## Version: @project-version@
 ## Category: Inventory
 ## SavedVariables: ListInventoryDB
