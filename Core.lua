@@ -281,6 +281,49 @@ local function AddCounts(tooltip, link)
     tooltip:Show()
 end
 
+-- The game prints "Interface action failed because of an AddOn" at most once a session, and not
+-- always with an ADDON_ACTION_BLOCKED event. Note where the call came from (file and function
+-- names only) so it can be traced.
+local function RecordBlocked(event, addon, func, stack)
+    if not ns.db then return end
+    ns.db.blocked = ns.db.blocked or {}
+    table.insert(ns.db.blocked, 1, {
+        event = event, addon = tostring(addon), func = tostring(func),
+        time = date and date("%Y-%m-%d %H:%M:%S"), stack = stack,
+    })
+    while #ns.db.blocked > 10 do table.remove(ns.db.blocked) end
+end
+ns.RecordBlocked = RecordBlocked
+
+local seenMessage = false
+local function MessageShown(how)
+    if seenMessage then return end
+    seenMessage = true
+    local stack = debugstack and debugstack(3, 30, 0) or ""
+    RecordBlocked("message", "?", how, stack)
+    -- (the first line of the stack: who asked for the message)
+    local first = stack:match("([^\n]+)") or "?"
+    Print("the game showed \"Interface action failed\", called from: " .. first .. " (full path saved for /li status).")
+end
+
+local function WatchBlockedMessage()
+    if not hooksecurefunc then return end
+    if type(DisplayInterfaceActionBlockedMessage) == "function" then
+        hooksecurefunc("DisplayInterfaceActionBlockedMessage", function() MessageShown("DisplayInterfaceActionBlockedMessage") end)
+    end
+    -- However it is printed: the chat frames, for that exact text.
+    local text = INTERFACE_ACTION_BLOCKED
+    if type(text) ~= "string" then return end
+    for i = 1, NUM_CHAT_WINDOWS or 10 do
+        local cf = _G["ChatFrame" .. i]
+        if cf and cf.AddMessage then
+            hooksecurefunc(cf, "AddMessage", function(_, msg)
+                if msg == text then MessageShown("ChatFrame" .. i .. ":AddMessage") end
+            end)
+        end
+    end
+end
+
 local function HookTooltips()
     if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
         TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, data)
@@ -336,12 +379,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         -- Every one is kept, whichever addon the game blames (arg1), with the blocked function.
         if not ns.db then return end
         local func = ...
-        ns.db.blocked = ns.db.blocked or {}
-        table.insert(ns.db.blocked, 1, {
-            event = event, addon = tostring(arg1), func = tostring(func),
-            time = date and date("%Y-%m-%d %H:%M:%S"), stack = debugstack and debugstack(2, 20, 0),
-        })
-        while #ns.db.blocked > 10 do table.remove(ns.db.blocked) end
+        RecordBlocked(event, arg1, func, debugstack and debugstack(2, 20, 0))
         Print(("the game blocked |cffff8080%s|r, blaming %s (%s)."):format(tostring(func), tostring(arg1), event))
         return
     end
@@ -353,6 +391,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         end
         ns:Scan()
         HookTooltips()
+        WatchBlockedMessage()
         if ns.UI then ns.UI:Init() end
         return
     end
@@ -437,6 +476,14 @@ SlashCmdList["LISTINVENTORY"] = function(msg)
         for i, b in ipairs(ns.db.blocked or {}) do
             if i > 3 then break end
             Print(("blocked: %s, blaming %s, at %s (%s)"):format(b.func, tostring(b.addon), tostring(b.time), b.event))
+            if b.event == "message" and b.stack then
+                local n = 0
+                for line in b.stack:gmatch("[^\n]+") do
+                    n = n + 1
+                    if n > 6 then break end
+                    print("    " .. line)
+                end
+            end
         end
         if ns.UI then ns.UI:Diagnose() end
     elseif cmd == "grid" then
