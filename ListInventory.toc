@@ -1,0 +1,8 @@
+## Interface: 11507
+## Title: ListInventory
+## Notes: Lists the contents of your bags.
+## Author: SethGochey
+## Version: 0.1.0
+## SavedVariables: ListInventoryDB
+
+Core.lua
