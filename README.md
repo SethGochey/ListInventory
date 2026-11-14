@@ -17,7 +17,13 @@ Requires the World of Warcraft: Forever client (interface 16001).
 
 The list opens and closes with the game's bags, however they are opened: the bag button, the LB+RB+B chord, the Start-button radial menu, or a vendor, bank or mailbox.
 
-**In Forever's gamepad mode**, the game's own cursor drives the list. Move it onto a row and the list follows it; push past the top or bottom row and the list scrolls. A, X, Y and B do what the game does for that button. Getting this right is what the current test build is for: `/li probe` saves diagnostics to send back.
+**In Forever's gamepad mode**, the game's own controller cursor drives the list. The game's bag window stays open but hidden, and the list steers the cursor through its slots in list order:
+
+- **D-pad up/down** moves between items in the list.
+- **D-pad left/right** steps through that item's stacks; the row shows which one ("< 2 of 3 >") and its count.
+- **A, X, Y and B** are the game's own bag buttons, so using, eating, equipping, splitting, destroying and closing work exactly as in the default bags, in combat too.
+
+`/li grid` shows the game's bag window again behind the list (handy if something looks wrong). This is new, so `/li probe` saves diagnostics to send back if it misbehaves.
 
 **With gamepad mode off** (controller glyphs shown but the game's cursor not in use), the list takes the controller itself:
 
@@ -83,7 +89,8 @@ The addon is plain Lua with no libraries. The repository root is the addon folde
 - `ListInventory.toc` – addon metadata. `@project-version@` is filled in at build time.
 - `Data.lua` – item keys, per-character counts and the sorted rows (makes no game calls)
 - `Core.lua` – saved data, bag and bank scanning, events, tooltip counts, slash commands
-- `UI.lua` – the list window, controller navigation and the bag-button takeover
+- `UI.lua` – the list window, its own controller navigation, and opening with the game's bags
+- `Gamepad.lua` – Forever's gamepad mode: steering the game's cursor through the hidden bag slots in list order
 - `tests/Data_test.lua` – tests for `Data.lua`
 
 ### Tests

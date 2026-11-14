@@ -5,6 +5,7 @@ local Data = ns.Data
 ns.defaults = {
     replaceBags = true, -- open the list with the game's bags
     tooltip = true,     -- add counts from all characters to item tooltips
+    hideGrid = true,    -- gamepad mode: fade the game's bag window while the list drives its cursor
     view = "bags",      -- "bags" or "all"
 }
 
@@ -392,6 +393,10 @@ SlashCmdList["LISTINVENTORY"] = function(msg)
         Print("opens with bags: " .. tostring(ns.db.replaceBags) .. ", tooltip counts: " .. tostring(ns.db.tooltip))
         Print("this character's bank last seen: " .. Ago(ns.record.bankSeen))
         if ns.UI then ns.UI:Diagnose() end
+    elseif cmd == "grid" then
+        ns.db.hideGrid = not ns.db.hideGrid
+        Print("gamepad mode: the game's bag window is " .. (ns.db.hideGrid and "hidden" or "shown") .. " while the list is open.")
+        if ns.UI then ns.UI:Refresh() end
     elseif cmd == "probe" then
         if ns.UI then ns.UI:Probe() end
     elseif cmd == "debug" then
@@ -405,6 +410,7 @@ SlashCmdList["LISTINVENTORY"] = function(msg)
         print("  /li chars - characters counted together")
         print("  /li forget <name> - stop counting a deleted or transferred character")
         print("  /li status - diagnostics")
+        print("  /li grid - gamepad mode: show or hide the game's bag window behind the list")
         print("  /li probe - save controller diagnostics (test build)")
     end
 end

@@ -6,6 +6,9 @@
 - Fixed: the list swallowed every controller press while it was shown.
 - Fixed: Esc / B no longer goes through the game's special-windows list, which caused taint in Forever.
 - `/li probe` saves controller diagnostics.
+- Gamepad mode: the game's bag window is hidden and its controller cursor is steered through the bag slots in list order (up/down: items, left/right: stacks), so A/X/Y/B are the game's own bag actions. `/li grid` shows the bag window again.
+- Fixed: the game's slot buttons in the rows were hidden, so clicking items in the list did nothing.
+- Rows always show an item icon; gold shows on Forever.
 
 ## v0.1.0
 

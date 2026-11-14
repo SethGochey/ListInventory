@@ -32,7 +32,7 @@ if (-not $Version) {
 }
 
 # Files that make up the addon. Everything else in the repo stays out of the zip.
-$files = @('ListInventory.toc', 'Core.lua', 'Data.lua', 'UI.lua', 'README.md', 'LICENSE')
+$files = @('ListInventory.toc', 'Core.lua', 'Data.lua', 'UI.lua', 'Gamepad.lua', 'README.md', 'LICENSE')
 
 $dist = Join-Path $root 'dist'
 $stage = Join-Path $dist 'ListInventory'

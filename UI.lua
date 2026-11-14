@@ -416,6 +416,8 @@ function UI:Refresh()
         end
     end
     self:Render()
+    -- (Render worked out whether gamepad mode is on)
+    if ns.Gamepad then ns.Gamepad:Apply() end
 end
 
 local function ShowItemButton(row, s)
@@ -465,6 +467,7 @@ function UI:Render()
             end
             row.colA:SetText(e.a)
             row.colB:SetText(e.b)
+            if ns.Gamepad then ns.Gamepad:Decorate(row, e, selected) end
             row.more:SetShown(e.stacks ~= nil and #e.stacks > 1)
             if e.stack then
                 ShowItemButton(row, e.stack)
@@ -505,7 +508,7 @@ function UI:RenderHint()
         return
     end
     if self.gamepadMode then
-        self.hint:SetText("|cffaaaaaaTest build: the game's cursor drives the list. /li probe saves diagnostics.|r")
+        self.hint:SetText("|cffaaaaaaD-pad up/down: items   left/right: stacks   Buttons: as in your bags|r")
         return
     end
     if not self.focused then
@@ -871,36 +874,11 @@ end
 function UI:StopFollowing()
     wipe(held)
     self.cursorOnList = false
+    if ns.Gamepad then ns.Gamepad:Release() end
 end
 
 function UI:FollowCursor()
-    if not self.gamepadMode then return end
-    local nav = _G.SmartNavigation
-    if not (nav and nav.GetCurrentButton) then return end
-    local ok, current = pcall(nav.GetCurrentButton, nav)
-    local i = ok and RowOf(current)
-    self.cursorOnList = i ~= nil
-    if not i then
-        wipe(held)
-        return
-    end
-    local index = self.offset + i
-    if index ~= self.sel then
-        self.sel = index
-        self:Render()
-    end
-    -- Pushed past the first or last visible row: scroll, and put the cursor back on that row.
-    for key, dir in pairs({ PADDUP = -1, PADDDOWN = 1 }) do
-        local down = IsKeyDown and IsKeyDown(key) or false
-        local fresh = down and not held[key]
-        held[key] = down
-        if fresh and ((dir == 1 and i == VISIBLE) or (dir == -1 and i == 1)) and self.entries[index + dir] then
-            self.sel = index + dir
-            self:Render()
-            local row = self:VisibleRow(self.sel)
-            if row and nav.SelectButton then pcall(nav.SelectButton, nav, CursorTarget(row)) end
-        end
-    end
+    if self.gamepadMode and ns.Gamepad then ns.Gamepad:Follow() end
 end
 
 ---------------------------------------------------------------------------------------------
