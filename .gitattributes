@@ -1,0 +1,3 @@
+# Store and check out text files with LF everywhere, so builds are identical on Windows and CI.
+* text=auto eol=lf
+*.ps1 text eol=crlf

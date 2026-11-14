@@ -1,8 +1,11 @@
 ## Interface: 16001
 ## Title: ListInventory
-## Notes: Lists the contents of your bags.
+## Notes: Replaces the bags with a controller-friendly list of your items, with counts across all your characters.
 ## Author: SethGochey
 ## Version: @project-version@
+## Category: Inventory
 ## SavedVariables: ListInventoryDB
 
+Data.lua
 Core.lua
+UI.lua

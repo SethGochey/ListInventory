@@ -1,2 +1,8 @@
-.DS_Store
-*.zip
+# Local planning and AI tooling (kept out of the public repo)
+openspec/
+.claude/
+.agents/
+
+# Build output
+dist/
+.release/

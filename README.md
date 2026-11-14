@@ -1,17 +1,106 @@
 # ListInventory
 
-A World of Warcraft addon that lists the contents of your bags in chat.
+A World of Warcraft: Forever addon that replaces the bags with a scrollable list of your items, built to be driven with a controller.
 
-## Usage
+- **One row per item**, sorted by name, with two counts: how many are in this character's **Bags**, and the **Total** across this character's bank and every alt on the same realm, ruleset and faction. If you're farming Linen Cloth, the Linen row tells you at a glance how much you have everywhere.
+- **Stacks sub-menu.** Selecting an item that's spread over several stacks opens a list of those stacks (bag and slot, count each), so you can pick the exact one.
+- **Everything you can do in the default bags.** Each stack is a real bag slot: use, equip, open, sell to a vendor, put in the bank, trade, mail, pick up, split (Shift-click), link (Shift-click) and destroy.
+- **Two views.** **Bags** shows what you're carrying, plus the bank while it's open. **Everything** also lists items that only your bank or your alts have.
+- **Tooltips everywhere** gain a per-character count: "Total 367 / Main 67 (27 bags, 40 bank) / Alt 100 ...".
+- Free bag slots and your gold are shown at the bottom. An **Empty slots** row lets you put a picked-up item into a particular slot.
 
-- `/listinv` – list every item in your bags (stacks combined, sorted by name)
-- `/listinv <text>` – list only items whose name contains `<text>`
+Requires the World of Warcraft: Forever client (interface 16001).
 
-## Installation
+## Controller
 
-Copy the `ListInventory` folder into `World of Warcraft/<client>/Interface/AddOns/`.
+When you open the bags with your bag button, the list takes the controller:
 
-## Notes
+| Button | In the list | In a stacks sub-menu |
+| --- | --- | --- |
+| D-pad up/down | Move (hold to repeat) | Move |
+| LT / RT | Page up / down | Page up / down |
+| LB / RB | Switch Bags / Everything | – |
+| A | Open the stacks sub-menu, or use the item if it's a single stack. If you're holding an item, A puts it there instead | Use the stack, or put the held item there |
+| X | Pick up the stack | Pick up the stack |
+| Y | Destroy the stack (asks first: A yes, B no) | Destroy the stack |
+| B | Close the bags | Back to the list |
 
-`## Interface:` in `ListInventory.toc` must match your client's interface version
-(check in-game with `/dump select(4, GetBuildInfo())`).
+The selected item's tooltip, with its per-character counts, sits next to the window.
+
+When a vendor, the bank or the mailbox opens the bags for you, the list opens without taking the controller, so you can keep using that window. Press your bag button to move the controller into the list, and B to give it back.
+
+**In combat** the game doesn't let addons change controller bindings, so the list reads the controller directly instead. Moving, stacks, pick up, place and destroy still work. **Using** an item with A has to wait until combat ends, but clicking it with the mouse still works.
+
+## Mouse
+
+Click a row with several stacks to open its stacks. Click an item icon to do exactly what clicking it in the default bags does: right-click to use, sell or bank it, left-click to pick it up, Shift-click to link or split. Right-click a stacks list to go back. Drag the title bar to move the window. Esc closes it.
+
+## Counting your alts
+
+Each character's bags are saved whenever they change. Its bank is saved each time you open the bank, so **log in on each alt and visit the bank once** to get their numbers in. Characters are grouped by realm, ruleset and faction, so Horde characters on a normal realm are counted together and apart from your Alliance or hardcore characters.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `/li` | Open or close the list (also `/listinv`) |
+| `/li default` | Switch the bag button between the list and the default bags. `/li` still opens the list. |
+| `/li tooltip` | Turn the tooltip counts on or off |
+| `/li chars` | List the characters counted together, and when each bag and bank was last seen |
+| `/li forget <name>` | Stop counting a deleted or transferred character |
+| `/li status` | Diagnostics |
+
+Settings and counts are saved for your whole account.
+
+## Install
+
+Copy this folder into your Forever client's `Interface/AddOns` folder. On a default Windows install that folder is:
+
+```
+C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns
+```
+
+You should end up with `Interface/AddOns/ListInventory/ListInventory.toc`. Restart the game or type `/reload`, then make sure **ListInventory** is enabled in the AddOns list on the character screen.
+
+## Troubleshooting
+
+1. Type `/console scriptErrors 1` so Lua errors show on screen, then `/reload`.
+2. Type `/li status` and include its output when you open an issue.
+
+If something goes wrong with the bags, `/li default` gives you the default bags back straight away.
+
+## Development
+
+The addon is plain Lua with no libraries. The repository root is the addon folder:
+
+- `ListInventory.toc` – addon metadata. `@project-version@` is filled in at build time.
+- `Data.lua` – item keys, per-character counts and the sorted rows (makes no game calls)
+- `Core.lua` – saved data, bag and bank scanning, events, tooltip counts, slash commands
+- `UI.lua` – the list window, controller navigation and the bag-button takeover
+- `tests/Data_test.lua` – tests for `Data.lua`
+
+### Tests
+
+The tests need Lua 5.1 or LuaJIT. On Windows, `winget install DEVCOM.LuaJIT` installs it. Run from the repository root:
+
+```bash
+luajit tests/Data_test.lua
+```
+
+It prints `N passed, 0 failed` and exits 0 on success. GitHub Actions runs it on every push.
+
+### Local build
+
+```powershell
+.\build.ps1 -Version 0.1.0
+```
+
+This writes `dist\ListInventory-0.1.0.zip`. Add `-AddOnsPath "<your Interface\AddOns folder>"` to install the build straight into the game.
+
+### Releasing
+
+Releases are built by the [BigWigs packager](https://github.com/BigWigsMods/packager) in GitHub Actions (`.github/workflows/release.yml`) when you push a tag like `v0.1.0`. To publish to CurseForge, Wago or WoWInterface, add the project ID to `ListInventory.toc` (`## X-Curse-Project-ID:`, `## X-Wago-ID:`, `## X-WoWI-ID:`) and the site's token as a repository secret (`CF_API_KEY`, `WAGO_API_TOKEN`, `WOWI_API_TOKEN`).
+
+## License
+
+[MIT](LICENSE)
