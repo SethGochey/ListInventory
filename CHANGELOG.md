@@ -7,6 +7,8 @@
 - Fixed: Esc / B no longer goes through the game's special-windows list, which caused taint in Forever.
 - `/li probe` saves controller diagnostics.
 
+## v0.1.0
+
 First version, for World of Warcraft: Forever (interface 16001).
 
 - Replaces the bags with a scrollable list: one row per item, with this character's bag count and the total across the bank and every alt on the same realm, ruleset and faction.
