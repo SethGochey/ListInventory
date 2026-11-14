@@ -428,6 +428,8 @@ local function ShowItemButton(row, s)
     if SetItemButtonDesaturated then pcall(SetItemButtonDesaturated, b, s.locked) end
     if SetItemButtonQuality then pcall(SetItemButtonQuality, b, s.quality, s.link) end
     row.holder:Show()
+    -- The game's bag code keeps slot buttons hidden until a bag window shows them.
+    b:Show()
     -- Our own icon under the game's slot button: it shows whether or not the button draws.
     row.icon:SetTexture(s.icon)
     row.icon:SetShown(s.icon ~= nil)
