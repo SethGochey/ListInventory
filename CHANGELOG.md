@@ -16,7 +16,7 @@
 - Gamepad UI: holding an item hands the cursor back to the game's grid (normal 2-D movement) until it's placed.
 - On its own (/li) the list starts in the bottom-right corner.
 - Gamepad UI: item tooltips, comparison tooltips included, no longer flicker at the hidden slot before moving beside the list.
-- When the game blocks an action because of the addon, it says which one in chat, and `/li status` lists the last few.
+- When the game blocks an action because of an addon, ListInventory says which action and which addon the game blamed, and `/li status` lists the last few.
 
 ## v0.1.0
 

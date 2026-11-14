@@ -333,15 +333,16 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         return
     end
     if event == "ADDON_ACTION_BLOCKED" or event == "ADDON_ACTION_FORBIDDEN" then
-        if arg1 ~= addonName or not ns.db then return end
-        local func = ...  -- (arg1 is the addon, then the blocked function)
+        -- Every one is kept, whichever addon the game blames (arg1), with the blocked function.
+        if not ns.db then return end
+        local func = ...
         ns.db.blocked = ns.db.blocked or {}
         table.insert(ns.db.blocked, 1, {
-            event = event, func = tostring(func), time = date and date("%Y-%m-%d %H:%M:%S"),
-            stack = debugstack and debugstack(2, 20, 0),
+            event = event, addon = tostring(arg1), func = tostring(func),
+            time = date and date("%Y-%m-%d %H:%M:%S"), stack = debugstack and debugstack(2, 20, 0),
         })
         while #ns.db.blocked > 10 do table.remove(ns.db.blocked) end
-        Print("the game blocked |cffff8080" .. tostring(func) .. "|r (" .. event .. "). Saved for /li status.")
+        Print(("the game blocked |cffff8080%s|r, blaming %s (%s)."):format(tostring(func), tostring(arg1), event))
         return
     end
     if event == "PLAYER_LOGIN" then
@@ -435,7 +436,7 @@ SlashCmdList["LISTINVENTORY"] = function(msg)
         Print("this character's bank last seen: " .. Ago(ns.record.bankSeen))
         for i, b in ipairs(ns.db.blocked or {}) do
             if i > 3 then break end
-            Print(("blocked: %s at %s (%s)"):format(b.func, tostring(b.time), b.event))
+            Print(("blocked: %s, blaming %s, at %s (%s)"):format(b.func, tostring(b.addon), tostring(b.time), b.event))
         end
         if ns.UI then ns.UI:Diagnose() end
     elseif cmd == "grid" then
