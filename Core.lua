@@ -324,9 +324,24 @@ local EVENTS = {
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
-eventFrame:SetScript("OnEvent", function(self, event, arg1)
+-- The game blocking something because of this addon: say what, and keep it for /li status.
+eventFrame:RegisterEvent("ADDON_ACTION_BLOCKED")
+eventFrame:RegisterEvent("ADDON_ACTION_FORBIDDEN")
+eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     if event == "ADDON_LOADED" then
         if arg1 == addonName then LoadDB() end
+        return
+    end
+    if event == "ADDON_ACTION_BLOCKED" or event == "ADDON_ACTION_FORBIDDEN" then
+        if arg1 ~= addonName or not ns.db then return end
+        local func = ...  -- (arg1 is the addon, then the blocked function)
+        ns.db.blocked = ns.db.blocked or {}
+        table.insert(ns.db.blocked, 1, {
+            event = event, func = tostring(func), time = date and date("%Y-%m-%d %H:%M:%S"),
+            stack = debugstack and debugstack(2, 20, 0),
+        })
+        while #ns.db.blocked > 10 do table.remove(ns.db.blocked) end
+        Print("the game blocked |cffff8080" .. tostring(func) .. "|r (" .. event .. "). Saved for /li status.")
         return
     end
     if event == "PLAYER_LOGIN" then
@@ -418,6 +433,10 @@ SlashCmdList["LISTINVENTORY"] = function(msg)
         Print("group " .. ns.GroupLabel() .. ", " .. #ns.live.stacks .. " stacks, " .. ns.live.free .. "/" .. ns.live.slots .. " slots free")
         Print("opens with bags: " .. tostring(ns.db.replaceBags) .. ", tooltip counts: " .. tostring(ns.db.tooltip))
         Print("this character's bank last seen: " .. Ago(ns.record.bankSeen))
+        for i, b in ipairs(ns.db.blocked or {}) do
+            if i > 3 then break end
+            Print(("blocked: %s at %s (%s)"):format(b.func, tostring(b.time), b.event))
+        end
         if ns.UI then ns.UI:Diagnose() end
     elseif cmd == "grid" then
         ns.db.hideGrid = not ns.db.hideGrid

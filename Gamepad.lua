@@ -271,7 +271,7 @@ function GP:Release()
     self:Clear()
     self.placed, self.retries, self.holding = false, 0, nil
     self.tipHidden = false
-    Fade(GameTooltip, false)
+    for _, tip in ipairs(self:Tooltips()) do Fade(tip, false) end
     self:ShowList(true)
     self:UpdateFade()
     self.stackIndex = nil
@@ -285,14 +285,26 @@ function GP:OnItemTooltip(tooltip)
     if tooltip ~= GameTooltip or not self:ShouldHide() then return end
     local owner = tooltip:GetOwner()
     if owner and self.touched[owner] then
-        Fade(GameTooltip, true)
+        for _, tip in ipairs(self:Tooltips()) do Fade(tip, true) end
         self.tipHidden = true
     end
+end
+
+-- The main tooltip and the equipment comparison ones shown beside it.
+function GP:Tooltips()
+    local tips = { GameTooltip }
+    for _, name in ipairs({ "ShoppingTooltip1", "ShoppingTooltip2", "ShoppingTooltip3" }) do
+        if _G[name] then tips[#tips + 1] = _G[name] end
+    end
+    if type(GameTooltip.shoppingTooltips) == "table" then
+        for _, tip in ipairs(GameTooltip.shoppingTooltips) do tips[#tips + 1] = tip end
+    end
+    return tips
 end
 
 function GP:TakeTooltip()
     if not self.tipHidden then return end
     self.tipHidden = false
     UI:UpdateTooltip()
-    Fade(GameTooltip, false)
+    for _, tip in ipairs(self:Tooltips()) do Fade(tip, false) end
 end
