@@ -504,6 +504,6 @@ SlashCmdList["LISTINVENTORY"] = function(msg)
         print("  /li forget <name> - stop counting a deleted or transferred character")
         print("  /li status - diagnostics")
         print("  /li grid - gamepad mode: show or hide the game's bag window behind the list")
-        print("  /li probe - save controller diagnostics (test build)")
+        print("  /li probe - save controller diagnostics")
     end
 end

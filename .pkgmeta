@@ -8,6 +8,7 @@ manual-changelog:
 
 ignore:
   - tests
+  - docs
   - assets
   - build.ps1
   - CHANGELOG.md

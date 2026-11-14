@@ -2,7 +2,6 @@
 
 A World of Warcraft: Forever addon that shows your bags as a scrollable list of items, built to be driven with a controller.
 
-> **Test build.** The list replaces the game's bag window by sitting over it while it's hidden, and drives Forever's controller cursor through it. See [Controller](#controller).
 
 - **One row per item**, sorted by name, with two counts: how many are in this character's **Bags**, and the **Total** across this character's bank and every alt on the same realm, ruleset and faction. If you're farming Linen Cloth, the Linen row tells you at a glance how much you have everywhere.
 - **Stacks sub-menu.** Selecting an item that's spread over several stacks opens a list of those stacks (bag and slot, count each), so you can pick the exact one.
@@ -25,7 +24,9 @@ The game's bag window stays open but hidden, whichever input you're using, and t
 - **D-pad left/right** steps through that item's stacks; the row shows which one ("< 2 of 3 >") and its count.
 - **A, X, Y and B** are the game's own bag buttons (A select / pick up, X use, Y More, B close), so everything works exactly as in the default bags, in combat too.
 
-`/li grid` shows the game's bag window again behind the list (handy if something looks wrong). This is new, so `/li probe` saves diagnostics to send back if it misbehaves.
+`/li grid` shows the game's bag window again behind the list, handy if something looks wrong.
+
+With the Gamepad UI on, the **Bags** / **Everything** tabs can only be switched with the mouse for now. A single list that a controller can reach end to end is planned (see `docs/plan-unified-list.md`).
 
 **With the Gamepad UI off**, a controller still works: the list takes it itself, with the same buttons as the game's bags:
 
@@ -59,7 +60,8 @@ Each character's bags are saved whenever they change. Its bank is saved each tim
 | --- | --- |
 | `/li` | Open or close the list (also `/listinv`) |
 | `/li default` | Turn opening the list with your bags on or off. `/li` still opens it. |
-| `/li probe` | Test build: save controller diagnostics (names and call paths only) to the saved settings file |
+| `/li grid` | With the Gamepad UI on: show or hide the game's bag window behind the list |
+| `/li probe` | Save controller diagnostics (names and call paths only) to the saved settings file |
 | `/li tooltip` | Turn the tooltip counts on or off |
 | `/li chars` | List the characters counted together, and when each bag and bank was last seen |
 | `/li forget <name>` | Stop counting a deleted or transferred character |

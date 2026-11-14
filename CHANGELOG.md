@@ -1,23 +1,12 @@
 # ListInventory
 
-## Unreleased
+## v1.0.0
 
-- Test build: the list opens and closes with the game's bag window, so every way of opening the bags (bag button, LB+RB+B, the radial menu, vendors) opens it. In Forever's gamepad mode the game's cursor drives the list.
-- Fixed: the list swallowed every controller press while it was shown.
-- Fixed: Esc / B no longer goes through the game's special-windows list, which caused taint in Forever.
-- `/li probe` saves controller diagnostics.
-- Gamepad mode: the game's bag window is hidden and its controller cursor is steered through the bag slots in list order (up/down: items, left/right: stacks), so A/X/Y/B are the game's own bag actions. `/li grid` shows the bag window again.
-- Fixed: the game's slot buttons in the rows were hidden, so clicking items in the list did nothing.
-- Rows always show an item icon; gold shows on Forever.
-- The game's bag window stays hidden while the list is open, whatever the input; it shows while you hold an item. Stray mouse clicks can't reach the hidden slots.
-- Controller buttons match the game's bags: A pick up / place, X use, Y More (Destroy, Link in chat), B back / close. Destroy is no longer a top-level button.
-- No "new item" glow on the list's icons. The list's close button closes the bags too.
-- The list sits right over the hidden bag window, so the game's More menu opens inside it.
-- Gamepad UI: holding an item hands the cursor back to the game's grid (normal 2-D movement) until it's placed.
-- On its own (/li) the list starts in the bottom-right corner.
-- Gamepad UI: item tooltips, comparison tooltips included, no longer flicker at the hidden slot before moving beside the list.
-- Gamepad UI: the list no longer moves the game's cursor when the bags open (the game's cursor code flagged that as "Interface action failed"); the list follows wherever the cursor starts.
-- When the game blocks an action because of an addon, ListInventory says which action and which addon the game blamed, and `/li status` lists the last few.
+- **The list replaces the bags.** It opens and closes with the game's bag window however the bags are opened (bag button, LB+RB+B, the Start-button radial menu, vendors, bank, mail) and sits right over it while it's hidden.
+- **Forever's Gamepad UI:** the game's own controller cursor drives the list. D-pad up/down moves between items in list order, left/right steps through an item's stacks, and A/X/Y/B are the game's own bag buttons, in combat too. Holding an item hands the grid back for normal movement until it's placed.
+- **Gamepad UI off:** a controller still works through the list's own controls, matching the game's bags (A pick up / place, X use, Y More with Destroy and Link in chat, B back / close). With the mouse, items in the list click exactly like bag slots.
+- Item tooltips sit beside the list and show counts on every character in the group.
+- `/li grid` shows the game's bag window behind the list. `/li probe` and `/li status` help with troubleshooting, including tracing "Interface action failed" messages.
 
 ## v0.1.0
 
