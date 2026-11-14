@@ -81,6 +81,25 @@ local function BankList()
 end
 
 ---------------------------------------------------------------------------------------------
+-- Forever's Gamepad UI setting (Options > Gamepad). On, the game's controller cursor runs the
+-- bags; the active input still flips between pad and mouse as either is used, which doesn't
+-- matter here.
+---------------------------------------------------------------------------------------------
+function ns.GamepadUI()
+    local util = _G.InputUtil
+    if util and util.IsGamepadUIEnabled then
+        local ok, on = pcall(util.IsGamepadUIEnabled)
+        if ok then return on and true or false end
+    end
+    local getCVar = (C_CVar and C_CVar.GetCVar) or GetCVar
+    local style = getCVar and getCVar("InputDeviceInterfaceStyle")
+    local padStyle = Enum and Enum.InputDeviceInterfaceType and Enum.InputDeviceInterfaceType.Gamepad
+    if style ~= nil and padStyle ~= nil then return tostring(style) == tostring(padStyle) end
+    -- Neither known: the game's own pad bindings tell (only while the pad is the active input).
+    return (GetBindingAction("PAD1", true) or ""):find("InputFunctionBindingButton", 1, true) ~= nil
+end
+
+---------------------------------------------------------------------------------------------
 -- Items: links and icons for things that are not in front of us right now.
 ---------------------------------------------------------------------------------------------
 -- Item info: Forever only has the C_Item versions of most of these.

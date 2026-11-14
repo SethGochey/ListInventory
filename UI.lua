@@ -36,10 +36,10 @@ UI.KEYS = {
     pageDown = { "PADRTRIGGER" },
     prevView = { "PADLSHOULDER" },
     nextView = { "PADRSHOULDER" },
-    accept = { "PAD1" },
+    accept = { "PAD1" }, -- as the game's bags: A picks up / places
     back = { "PAD2" },
-    pickup = { "PAD3" },
-    destroy = { "PAD4" },
+    use = { "PAD3" },    -- X uses / equips
+    more = { "PAD4" },   -- Y opens the More menu (destroy, link)
 }
 local REPEATS = { up = true, down = true, pageUp = true, pageDown = true }
 
@@ -112,8 +112,29 @@ local function EmptyEntry(s)
     return { kind = "stack", key = EMPTY_KEY, stack = s, name = s.where, a = "", b = "", nameColor = { 0.6, 0.6, 0.6 } }
 end
 
+local MORE_OPTIONS = {
+    { action = "destroy", name = "Destroy", nameColor = { 1, 0.35, 0.35 } },
+    { action = "link", name = "Link in chat" },
+    { action = "cancel", name = "Back" },
+}
+
 function UI:BuildEntries()
     local live = ns.live
+    if self.mode == "more" or self.mode == "confirm" then
+        local s = self.moreStack
+        if s and ns.SlotLink(s.bag, s.slot) == s.link then
+            local entries = {}
+            for _, o in ipairs(MORE_OPTIONS) do
+                entries[#entries + 1] = { kind = "option", key = "option:" .. o.action, action = o.action,
+                    name = o.name, nameColor = o.nameColor or { 0.9, 0.9, 0.9 }, a = "", b = "" }
+            end
+            self.drillTitle = (s.link or "?") .. (s.count and s.count > 1 and ("  |cffaaaaaax" .. s.count .. "|r") or "")
+            self.entries = entries
+            return
+        end
+        -- The stack is gone: back to where the menu was opened from.
+        self.mode, self.moreStack, self.confirm = self.moreReturn or "list", nil, nil
+    end
     local rows = Data.BuildRows({
         chars = ns.group, current = ns.charName, stacks = live.stacks,
         view = self.mode == "list" and ns.db.view or "bags",
@@ -306,6 +327,7 @@ function UI:Init()
     self.frame = frame
     self:RestorePosition()
 
+    if type(frame.CloseButton) == "table" then frame.CloseButton:SetScript("OnClick", function() UI:Do("close") end) end
     frame.title = frame.TitleText or frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     if not frame.TitleText then frame.title:SetPoint("TOP", 0, -14) end
 
@@ -432,6 +454,15 @@ local function ShowItemButton(row, s)
     row.holder:Show()
     -- The game's bag code keeps slot buttons hidden until a bag window shows them.
     b:Show()
+    -- Its "new item" glow is the bag window's business, not the list's.
+    for _, k in ipairs({ "NewItemTexture", "BattlepayItemTexture" }) do
+        local t = b[k]
+        if type(t) == "table" and t.Hide then t:Hide() end
+    end
+    for _, k in ipairs({ "newitemglowAnim", "flashAnim" }) do
+        local a = b[k]
+        if type(a) == "table" and a.Stop then a:Stop() end
+    end
     -- Our own icon under the game's slot button: it shows whether or not the button draws.
     row.icon:SetTexture(s.icon)
     row.icon:SetShown(s.icon ~= nil)
@@ -474,7 +505,7 @@ function UI:Render()
             else
                 row.holder:Hide()
                 row.icon:SetTexture(e.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
-                row.icon:SetShown(e.kind ~= "empty")
+                row.icon:SetShown(e.kind ~= "empty" and e.kind ~= "option")
                 row.icon:SetDesaturated(e.row ~= nil and e.row.bags == 0 and e.row.bank == 0)
             end
         end
@@ -488,7 +519,7 @@ function UI:Render()
     end
     self.heading:SetShown(not inList)
     if not inList then self.heading:SetText(self.drillTitle or "") end
-    self.colHeadA:SetText(inList and "Bags" or "Count")
+    self.colHeadA:SetText(inList and "Bags" or ((self.mode == "stacks") and "Count" or ""))
     self.colHeadB:SetText(inList and "Total" or "")
 
     self.frame.title:SetText("Inventory - " .. (ns.charName or ""))
@@ -508,7 +539,9 @@ function UI:RenderHint()
         return
     end
     if self.gamepadMode then
-        self.hint:SetText("|cffaaaaaaD-pad up/down: items   left/right: stacks   Buttons: as in your bags|r")
+        -- The buttons are the game's own here; the D-pad follows the list.
+        self.hint:SetText(Glyph("PAD1") .. " Select   " .. Glyph("PAD3") .. " Use   " .. Glyph("PAD4") .. " More   "
+            .. Glyph("PAD2") .. " Close   |cffaaaaaaD-pad: items, stacks|r")
         return
     end
     if not self.focused then
@@ -522,16 +555,18 @@ function UI:RenderHint()
     end
     local e = self:Selected()
     local parts = {}
-    if e and e.stacks and #e.stacks > 1 and not e.stack then
+    if self.mode == "more" then
+        parts[#parts + 1] = Glyph("PAD1") .. " Select"
+    elseif e and e.stacks and #e.stacks > 1 and not e.stack then
         parts[#parts + 1] = Glyph("PAD1") .. " Stacks"
     elseif e and e.stack and e.stack.empty then
         parts[#parts + 1] = Glyph("PAD1") .. " Put here"
     elseif e and e.stack then
-        parts[#parts + 1] = Glyph("PAD1") .. ((GetCursorInfo() and " Place") or " Use")
-        parts[#parts + 1] = Glyph("PAD3") .. " Pick up"
-        parts[#parts + 1] = Glyph("PAD4") .. " Destroy"
+        parts[#parts + 1] = Glyph("PAD1") .. ((GetCursorInfo() and " Place") or " Pick up")
+        parts[#parts + 1] = Glyph("PAD3") .. " Use"
+        parts[#parts + 1] = Glyph("PAD4") .. " More"
     end
-    parts[#parts + 1] = Glyph("PAD2") .. (self.mode == "stacks" and " Back" or " Close")
+    parts[#parts + 1] = Glyph("PAD2") .. (self.mode == "list" and " Close" or " Back")
     if self.mode == "list" then parts[#parts + 1] = Glyph("PADLSHOULDER") .. Glyph("PADRSHOULDER") .. " View" end
     self.hint:SetText(table.concat(parts, "   "))
 end
@@ -596,7 +631,7 @@ function UI:UpdateBindings()
     -- Forever's gamepad mode puts its own override bindings on the pad: with ours cleared, what
     -- PAD1 does now tells whether it is on.
     local wasGamepad = self.gamepadMode
-    self.gamepadMode = (GetBindingAction("PAD1", true) or ""):find("InputFunctionBindingButton", 1, true) ~= nil
+    self.gamepadMode = ns.GamepadUI()
     if wasGamepad ~= self.gamepadMode then self:RenderHint() end
     -- Escape closes a list opened on its own (/li). With the bags, Escape is the game's: it
     -- closes the bags, and the list with them.
@@ -607,14 +642,13 @@ function UI:UpdateBindings()
     if not self.focused or self.gamepadMode then return end
     local e = self:Selected()
     local row = e and e.stack and self:VisibleRow(self.sel)
-    local itemButton = row and self.mode ~= "confirm" and row.item:GetName()
+    local itemButton = row and (self.mode == "list" or self.mode == "stacks") and row.item:GetName()
     for action, keys in pairs(self.KEYS) do
         local target, mouse = self.nav[action]:GetName(), "LeftButton"
         if itemButton and action == "accept" then
-            target = itemButton
-            mouse = (GetCursorInfo() or e.stack.empty) and "LeftButton" or "RightButton"
-        elseif itemButton and action == "pickup" then
-            target = itemButton
+            target = itemButton -- left click: pick up, or place what the cursor holds
+        elseif itemButton and action == "use" and not e.stack.empty then
+            target, mouse = itemButton, "RightButton"
         end
         for _, key in ipairs(keys) do SetOverrideBindingClick(self.frame, true, key, target, mouse) end
     end
@@ -696,8 +730,12 @@ function UI:Do(action, fromPad)
         self:SetView(ns.db.view == "bags" and "all" or "bags")
     elseif action == "back" then
         if self.mode == "confirm" then
-            self.mode, self.confirm = self.confirmReturn, nil
+            self.mode, self.confirm = "more", nil
             self:Render()
+        elseif self.mode == "more" then
+            self.mode, self.moreStack = self.moreReturn or "list", nil
+            self.sel = self.moreSel or 1
+            self:Refresh()
         elseif self.mode == "stacks" then
             self:LeaveStacks()
             self:Refresh()
@@ -713,41 +751,59 @@ function UI:Do(action, fromPad)
     elseif action == "accept" then
         if self.mode == "confirm" then
             self:DestroyConfirmed()
+        elseif self.mode == "more" then
+            if e then self:MoreOption(e.action) end
         elseif e and e.stacks and #e.stacks > 1 and not e.stack then
             self:Drill(e)
         elseif e and e.stack then
-            -- Only reached without a secure binding: during combat.
-            if GetCursorInfo() or e.stack.empty then
-                ns.PickupSlot(e.stack.bag, e.stack.slot)
-            else
-                self:Flash("Using items with the controller waits until combat ends. Clicking still works.")
-            end
+            -- Only reached without a secure binding (combat): pick up / place is allowed.
+            ns.PickupSlot(e.stack.bag, e.stack.slot)
         elseif e and e.row then
             self:Flash("None of these are in your bags right now.")
         end
-    elseif action == "pickup" then
-        if self.mode == "confirm" then return end
-        if e and e.stack then
-            ns.PickupSlot(e.stack.bag, e.stack.slot)
-        elseif e and e.stacks and #e.stacks > 1 then
+    elseif action == "use" then
+        if self.mode ~= "list" and self.mode ~= "stacks" then return end
+        if e and e.stacks and #e.stacks > 1 and not e.stack then
             self:Drill(e)
+        elseif e and e.stack and not e.stack.empty then
+            -- Only reached without a secure binding: during combat.
+            self:Flash("Using items with the controller waits until combat ends. Clicking still works.")
         end
-    elseif action == "destroy" then
-        if self.mode == "confirm" then return end
+    elseif action == "more" then
+        if self.mode ~= "list" and self.mode ~= "stacks" then return end
         if e and e.stack and not e.stack.empty then
-            self.confirm = e.stack
-            self.confirmReturn = self.mode
-            self.mode = "confirm"
-            self:Render()
-        elseif e and e.stacks and #e.stacks > 1 then
+            self.moreStack, self.moreReturn, self.moreSel = e.stack, self.mode, self.sel
+            self.mode = "more"
+            self.sel, self.offset = 1, 0
+            self:Refresh()
+        elseif e and e.stacks and #e.stacks > 1 and not e.stack then
             self:Drill(e)
         end
     end
 end
 
+function UI:MoreOption(action)
+    local s = self.moreStack
+    if not s then return end
+    if action == "destroy" then
+        self.confirm = s
+        self.mode = "confirm"
+        self:Render()
+    elseif action == "link" then
+        local inserted = ChatEdit_InsertLink and ChatEdit_InsertLink(s.link)
+        if not inserted and ChatFrame_OpenChat then ChatFrame_OpenChat(s.link) end
+        self:Do("back")
+    else
+        self:Do("back")
+    end
+end
+
 function UI:DestroyConfirmed()
     local s = self.confirm
-    self.mode, self.confirm = self.confirmReturn, nil
+    self.confirm = nil
+    -- Back to where the More menu was opened from.
+    self.mode, self.moreStack = self.moreReturn or "list", nil
+    self.sel = self.moreSel or 1
     if s and ns.SlotLink(s.bag, s.slot) == s.link then
         ClearCursor()
         ns.PickupSlot(s.bag, s.slot)
@@ -755,7 +811,7 @@ function UI:DestroyConfirmed()
     else
         self:Flash("That stack moved, so nothing was destroyed.")
     end
-    self:Render()
+    self:Refresh()
 end
 
 ---------------------------------------------------------------------------------------------
@@ -820,7 +876,10 @@ local function BagFrameShown(f)
     if #UI.bagOpens > 6 then table.remove(UI.bagOpens) end
     if ns.db.replaceBags then
         if UI.frame:IsShown() then
-            if UI.openedBy == "bags" then UI:Place() end
+            if UI.openedBy == "bags" then
+                UI:Place()
+                UI:Refresh()
+            end
         else
             UI:Open("bags")
         end
@@ -878,7 +937,7 @@ function UI:StopFollowing()
 end
 
 function UI:FollowCursor()
-    if self.gamepadMode and ns.Gamepad then ns.Gamepad:Follow() end
+    if ns.Gamepad then ns.Gamepad:Tick() end
 end
 
 ---------------------------------------------------------------------------------------------

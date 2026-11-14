@@ -17,24 +17,26 @@ Requires the World of Warcraft: Forever client (interface 16001).
 
 The list opens and closes with the game's bags, however they are opened: the bag button, the LB+RB+B chord, the Start-button radial menu, or a vendor, bank or mailbox.
 
-**In Forever's gamepad mode**, the game's own controller cursor drives the list. The game's bag window stays open but hidden, and the list steers the cursor through its slots in list order:
+The game's bag window stays open behind the list but hidden, whichever input you're using. While you hold an item (after picking it up), the bag window shows again so you can see where it goes, and hides once it's placed.
+
+**With Forever's Gamepad UI on**, the game's own controller cursor drives the list. The list steers the cursor through the hidden bag slots in list order:
 
 - **D-pad up/down** moves between items in the list.
 - **D-pad left/right** steps through that item's stacks; the row shows which one ("< 2 of 3 >") and its count.
-- **A, X, Y and B** are the game's own bag buttons, so using, eating, equipping, splitting, destroying and closing work exactly as in the default bags, in combat too.
+- **A, X, Y and B** are the game's own bag buttons (A select / pick up, X use, Y More, B close), so everything works exactly as in the default bags, in combat too.
 
 `/li grid` shows the game's bag window again behind the list (handy if something looks wrong). This is new, so `/li probe` saves diagnostics to send back if it misbehaves.
 
-**With gamepad mode off** (controller glyphs shown but the game's cursor not in use), the list takes the controller itself:
+**With the Gamepad UI off**, a controller still works: the list takes it itself, with the same buttons as the game's bags:
 
 | Button | In the list | In a stacks sub-menu |
 | --- | --- | --- |
 | D-pad up/down | Move (hold to repeat) | Move |
 | LT / RT | Page up / down | Page up / down |
 | LB / RB | Switch Bags / Everything | – |
-| A | Open the stacks sub-menu, or use the item if it's a single stack. If you're holding an item, A puts it there instead | Use the stack, or put the held item there |
-| X | Pick up the stack | Pick up the stack |
-| Y | Destroy the stack (asks first: A yes, B no) | Destroy the stack |
+| A | Open the stacks sub-menu, or pick up a single stack. Holding an item: put it there | Pick up the stack, or put the held item there |
+| X | Use or equip a single stack | Use or equip the stack |
+| Y | More menu: Destroy (asks first), Link in chat | More menu |
 | B | Close the bags | Back to the list |
 
 The selected item's tooltip, with its per-character counts, sits next to the window.

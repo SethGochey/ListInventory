@@ -9,6 +9,9 @@
 - Gamepad mode: the game's bag window is hidden and its controller cursor is steered through the bag slots in list order (up/down: items, left/right: stacks), so A/X/Y/B are the game's own bag actions. `/li grid` shows the bag window again.
 - Fixed: the game's slot buttons in the rows were hidden, so clicking items in the list did nothing.
 - Rows always show an item icon; gold shows on Forever.
+- The game's bag window stays hidden while the list is open, whatever the input; it shows while you hold an item. Stray mouse clicks can't reach the hidden slots.
+- Controller buttons match the game's bags: A pick up / place, X use, Y More (Destroy, Link in chat), B back / close. Destroy is no longer a top-level button.
+- No "new item" glow on the list's icons. The list's close button closes the bags too.
 
 ## v0.1.0
 

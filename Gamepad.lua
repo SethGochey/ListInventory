@@ -71,15 +71,40 @@ local function Fade(region, on)
     end
 end
 
-function GP:FadeGame(on)
-    local bags = UI:ShownBagFrame()
-    on = on and ns.db.hideGrid ~= false
-    for _, f in ipairs(UI.bagFrames) do Fade(f, on and f:IsShown()) end
-    if not on then
-        for _, f in ipairs(UI.bagFrames) do Fade(f, false) end
-    end
+-- The game's bag window is hidden while the list is open with it, whichever input is in use,
+-- except while the cursor holds an item: then it shows, so the item sits over real slots.
+function GP:ShouldHide()
+    return ns.db.hideGrid ~= false and UI.frame and UI.frame:IsShown() and UI.openedBy == "bags"
+        and not self.holding
+end
+
+function GP:UpdateFade()
+    local hide = self:ShouldHide()
+    for _, f in ipairs(UI.bagFrames) do Fade(f, hide and f:IsShown()) end
     local nav = Nav()
-    Fade(nav and nav.Pointer, on and bags ~= nil)
+    Fade(nav and nav.Pointer, hide and UI.gamepadMode)
+    self:Block(hide)
+end
+
+-- Something of ours over the hidden bag window, so stray mouse clicks can't reach its slots.
+function GP:Block(on)
+    local bags = on and UI:ShownBagFrame()
+    if not self.blocker then
+        local b = CreateFrame("Frame", nil, UIParent)
+        b:EnableMouse(true)
+        b:EnableMouseWheel(true)
+        b:SetScript("OnMouseWheel", function() end)
+        b:SetFrameStrata("HIGH")
+        b:Hide()
+        self.blocker = b
+    end
+    if bags then
+        self.blocker:ClearAllPoints()
+        self.blocker:SetAllPoints(bags)
+        self.blocker:Show()
+    else
+        self.blocker:Hide()
+    end
 end
 
 ---------------------------------------------------------------------------------------------
@@ -130,10 +155,8 @@ end
 -- Rebuild the jump chain from the list's current order.
 function GP:Apply()
     self:Clear()
-    if not self:Active() then
-        self:FadeGame(false)
-        return
-    end
+    self:UpdateFade()
+    if not self:Active() then return end
     local buttons = self:SlotButtons()
     local chain = {}
     for i, e in ipairs(UI.entries) do
@@ -161,7 +184,6 @@ function GP:Apply()
         end
     end
     self.chain = chain
-    self:FadeGame(#chain > 0)
 
     if #chain == 0 then
         -- The game may lay its slots out just after the window shows: look again shortly.
@@ -186,7 +208,17 @@ function GP:Apply()
     end
 end
 
--- From the list's OnUpdate: the list follows the game's cursor.
+-- From the list's OnUpdate.
+function GP:Tick()
+    local holding = GetCursorInfo() ~= nil
+    if holding ~= self.holding then
+        self.holding = holding
+        self:UpdateFade()
+    end
+    if UI.gamepadMode then self:Follow() end
+end
+
+-- The list follows the game's cursor.
 function GP:Follow()
     if not self.chain then return end
     local nav = Nav()
@@ -210,7 +242,7 @@ end
 
 function GP:Release()
     self:Clear()
-    self.placed, self.retries = false, 0
-    self:FadeGame(false)
+    self.placed, self.retries, self.holding = false, 0, nil
+    self:UpdateFade()
     self.stackIndex = nil
 end
