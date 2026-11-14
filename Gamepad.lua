@@ -203,19 +203,9 @@ function GP:Apply()
     end
     self.retries = 0
 
-    -- Put the cursor on the list's selection when the bags open, or when it sits on a bag slot
-    -- the list doesn't know. (Never pulled back from another window, such as a vendor's.)
-    local nav = Nav()
-    local ok, current = pcall(nav.GetCurrentButton, nav)
-    local key = ok and SlotKey(current)
-    if not self.placed or (key and not self.indexBySlot[key]) then
-        self.placed = true
-        local target = chain[1]
-        for _, link in ipairs(chain) do
-            if link.index <= UI.sel then target = link end
-        end
-        if nav.SelectButton then pcall(nav.SelectButton, nav, target.buttons[1]) end
-    end
+    -- The cursor is never moved from here: SmartNavigation flags a cursor move made by addon code
+    -- ("Interface action failed"). It needn't be: every bag slot belongs to a row of the list,
+    -- so wherever the game puts its cursor, the list follows it (Follow).
 end
 
 -- From the list's OnUpdate.
@@ -269,7 +259,7 @@ end
 
 function GP:Release()
     self:Clear()
-    self.placed, self.retries, self.holding = false, 0, nil
+    self.retries, self.holding = 0, nil
     self.tipHidden = false
     for _, tip in ipairs(self:Tooltips()) do Fade(tip, false) end
     self:ShowList(true)

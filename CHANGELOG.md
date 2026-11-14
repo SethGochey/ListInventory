@@ -16,6 +16,7 @@
 - Gamepad UI: holding an item hands the cursor back to the game's grid (normal 2-D movement) until it's placed.
 - On its own (/li) the list starts in the bottom-right corner.
 - Gamepad UI: item tooltips, comparison tooltips included, no longer flicker at the hidden slot before moving beside the list.
+- Gamepad UI: the list no longer moves the game's cursor when the bags open (the game's cursor code flagged that as "Interface action failed"); the list follows wherever the cursor starts.
 - When the game blocks an action because of an addon, ListInventory says which action and which addon the game blamed, and `/li status` lists the last few.
 
 ## v0.1.0

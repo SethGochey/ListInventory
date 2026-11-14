@@ -477,11 +477,11 @@ SlashCmdList["LISTINVENTORY"] = function(msg)
             if i > 3 then break end
             Print(("blocked: %s, blaming %s, at %s (%s)"):format(b.func, tostring(b.addon), tostring(b.time), b.event))
             if b.event == "message" and b.stack then
+                -- The game's own lines near the top, and every line from this addon.
                 local n = 0
                 for line in b.stack:gmatch("[^\n]+") do
                     n = n + 1
-                    if n > 6 then break end
-                    print("    " .. line)
+                    if n <= 6 or line:find("ListInventory", 1, true) then print("    " .. line) end
                 end
             end
         end
