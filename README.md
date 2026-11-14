@@ -17,7 +17,7 @@ Requires the World of Warcraft: Forever client (interface 16001).
 
 The list opens and closes with the game's bags, however they are opened: the bag button, the LB+RB+B chord, the Start-button radial menu, or a vendor, bank or mailbox.
 
-The game's bag window stays open behind the list but hidden, whichever input you're using. While you hold an item (after picking it up), the bag window shows again so you can see where it goes, and hides once it's placed.
+The game's bag window stays open but hidden, whichever input you're using, and the list sits right on top of it (so with the bags, the list goes where the bags go; drag it only when opened with `/li`). With the Gamepad UI on, picking up an item hands over to the game's own bag window: the list steps aside, the grid shows and the D-pad moves around it as usual until the item is placed, then the list comes back.
 
 **With Forever's Gamepad UI on**, the game's own controller cursor drives the list. The list steers the cursor through the hidden bag slots in list order:
 
@@ -47,7 +47,7 @@ B closes the list and the bags together.
 
 ## Mouse
 
-Click a row with several stacks to open its stacks. Click an item icon to do exactly what clicking it in the default bags does: right-click to use, sell or bank it, left-click to pick it up, Shift-click to link or split. Right-click a stacks list to go back. Drag the title bar to move the window when it's opened with `/li`; with the bags it sits beside the bag window. Esc closes it (with the bags, Esc closes the bags and the list together).
+Click a row with several stacks to open its stacks. Click an item icon to do exactly what clicking it in the default bags does: right-click to use, sell or bank it, left-click to pick it up, Shift-click to link or split. Right-click a stacks list to go back. Drag the title bar to move the window when it's opened with `/li` (it starts in the bottom-right corner); with the bags it sits over the bag window. Esc closes it (with the bags, Esc closes the bags and the list together).
 
 ## Counting your alts
 

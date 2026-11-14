@@ -309,14 +309,20 @@ function UI:Init()
         })
     end
     frame:SetSize(WIDTH, 122 + VISIBLE * ROW_H)
-    frame:SetFrameStrata("MEDIUM")
+    -- Above the game's bag window it covers (and the blocker over that window).
+    frame:SetFrameStrata("HIGH")
+    frame:SetFrameLevel(50)
     frame:SetToplevel(true)
     frame:SetClampedToScreen(true)
     frame:EnableMouse(true)
     frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", frame.StartMoving)
+    -- Dragged only when opened on its own (/li): with the bags it sits over the bag window.
+    frame:SetScript("OnDragStart", function(f)
+        if UI.openedBy ~= "bags" then f:StartMoving() end
+    end)
     frame:SetScript("OnDragStop", function(f)
+        if UI.openedBy == "bags" then return end
         f:StopMovingOrSizing()
         local point, _, relPoint, x, y = f:GetPoint()
         ns.db.point = { point, relPoint, x, y }
@@ -421,7 +427,7 @@ function UI:RestorePosition()
     if p then
         self.frame:SetPoint(p[1], UIParent, p[2], p[3], p[4])
     else
-        self.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -90, 110)
+        self.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -20, 90)
     end
 end
 
@@ -849,8 +855,10 @@ end
 function UI:Place()
     local bags = self:ShownBagFrame()
     if self.openedBy == "bags" and bags then
+        -- Right over the hidden bag window: the game's menus for an item (More) open over its
+        -- hidden slot, so they land inside the list.
         self.frame:ClearAllPoints()
-        self.frame:SetPoint("TOPRIGHT", bags, "TOPLEFT", -8, 0)
+        self.frame:SetPoint("BOTTOMRIGHT", bags, "BOTTOMRIGHT", 0, 0)
     else
         self:RestorePosition()
     end

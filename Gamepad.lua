@@ -73,9 +73,17 @@ end
 
 -- The game's bag window is hidden while the list is open with it, whichever input is in use,
 -- except while the cursor holds an item: then it shows, so the item sits over real slots.
-function GP:ShouldHide()
+function GP:Covering()
     return ns.db.hideGrid ~= false and UI.frame and UI.frame:IsShown() and UI.openedBy == "bags"
-        and not self.holding
+end
+
+-- Holding an item with the Gamepad UI on: the game's grid is back in charge until it's placed.
+function GP:Handover()
+    return self.holding and UI.gamepadMode and self:Covering()
+end
+
+function GP:ShouldHide()
+    return self:Covering() and not self:Handover()
 end
 
 function GP:UpdateFade()
@@ -95,6 +103,7 @@ function GP:Block(on)
         b:EnableMouseWheel(true)
         b:SetScript("OnMouseWheel", function() end)
         b:SetFrameStrata("HIGH")
+        b:SetFrameLevel(1) -- under the list, which sits over the same window
         b:Hide()
         self.blocker = b
     end
@@ -156,7 +165,8 @@ end
 function GP:Apply()
     self:Clear()
     self:UpdateFade()
-    if not self:Active() then return end
+    -- (holding an item: the game's grid has the cursor until it's placed)
+    if not self:Active() or self:Handover() then return end
     local buttons = self:SlotButtons()
     local chain = {}
     for i, e in ipairs(UI.entries) do
@@ -213,9 +223,25 @@ function GP:Tick()
     local holding = GetCursorInfo() ~= nil
     if holding ~= self.holding then
         self.holding = holding
-        self:UpdateFade()
+        if self:Handover() then
+            -- The grid shows and the cursor moves on it as usual; the list steps aside.
+            self:Clear()
+            self:ShowList(false)
+            self:UpdateFade()
+        else
+            self:ShowList(true)
+            self:Apply() -- re-hides the grid and puts the list order back on the cursor
+        end
     end
     if UI.gamepadMode then self:Follow() end
+end
+
+-- The list out of the way (invisible, no mouse) while the game's grid has the held item.
+function GP:ShowList(on)
+    if not UI.frame then return end
+    UI.frame:SetAlpha(on and 1 or 0)
+    UI.frame:EnableMouse(on)
+    UI.list:SetShown(on)
 end
 
 -- The list follows the game's cursor.
@@ -243,6 +269,7 @@ end
 function GP:Release()
     self:Clear()
     self.placed, self.retries, self.holding = false, 0, nil
+    self:ShowList(true)
     self:UpdateFade()
     self.stackIndex = nil
 end

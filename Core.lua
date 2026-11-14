@@ -157,6 +157,11 @@ local function LoadDB()
     for k, v in pairs(ns.defaults) do
         if db[k] == nil then db[k] = v end
     end
+    -- Positions saved by earlier builds came from the list docked beside the bags: drop them.
+    if (db.layout or 0) < 2 then
+        db.point = nil
+        db.layout = 2
+    end
     db.groups = db.groups or {}
     db.items = db.items or {}
     ns.db = db

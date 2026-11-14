@@ -12,6 +12,9 @@
 - The game's bag window stays hidden while the list is open, whatever the input; it shows while you hold an item. Stray mouse clicks can't reach the hidden slots.
 - Controller buttons match the game's bags: A pick up / place, X use, Y More (Destroy, Link in chat), B back / close. Destroy is no longer a top-level button.
 - No "new item" glow on the list's icons. The list's close button closes the bags too.
+- The list sits right over the hidden bag window, so the game's More menu opens inside it.
+- Gamepad UI: holding an item hands the cursor back to the game's grid (normal 2-D movement) until it's placed.
+- On its own (/li) the list starts in the bottom-right corner.
 
 ## v0.1.0
 
