@@ -15,6 +15,7 @@
 - The list sits right over the hidden bag window, so the game's More menu opens inside it.
 - Gamepad UI: holding an item hands the cursor back to the game's grid (normal 2-D movement) until it's placed.
 - On its own (/li) the list starts in the bottom-right corner.
+- Gamepad UI: item tooltips open beside the list straight away, without a flicker at the hidden slot.
 
 ## v0.1.0
 

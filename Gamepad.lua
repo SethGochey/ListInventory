@@ -273,3 +273,19 @@ function GP:Release()
     self:UpdateFade()
     self.stackIndex = nil
 end
+
+-- The game's tooltip for a hidden slot under its cursor: placed beside the list as it is
+-- anchored, before it ever draws over the hidden slot.
+local anchoring = false
+local function PlaceTooltip(tooltip, owner)
+    if anchoring or not GP.touched[owner] or not GP:ShouldHide() then return end
+    anchoring = true
+    tooltip:SetOwner(owner, "ANCHOR_NONE")
+    anchoring = false
+    tooltip:ClearAllPoints()
+    tooltip:SetPoint("TOPRIGHT", UI.frame, "TOPLEFT", -4, 0)
+end
+
+if GameTooltip and hooksecurefunc then
+    hooksecurefunc(GameTooltip, "SetOwner", PlaceTooltip)
+end
