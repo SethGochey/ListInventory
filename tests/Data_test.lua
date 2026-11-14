@@ -39,6 +39,8 @@ eq("item id from plain key", Data.KeyItemID("2589"), 2589)
 eq("name from link", Data.ItemName(LINEN), "Linen Cloth")
 eq("name from suffixed link", Data.ItemName(EAGLE), "Bandit Cloak of the Eagle")
 
+eq("empty name (item not loaded yet)", Data.ItemName("|cffffffff|Hitem:2589::::::::60:::::|h[]|h|r"), nil)
+
 -- GroupKey
 eq("group key", Data.GroupKey("Whitemane", "normal", "Horde"), "Whitemane|normal|Horde")
 eq("group key default ruleset", Data.GroupKey("Whitemane", nil, "Horde"), "Whitemane|normal|Horde")

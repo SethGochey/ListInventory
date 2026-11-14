@@ -82,8 +82,30 @@ end
 ---------------------------------------------------------------------------------------------
 -- Items: links and icons for things that are not in front of us right now.
 ---------------------------------------------------------------------------------------------
+-- Item info: Forever only has the C_Item versions of most of these.
+local GetInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
+
+local function HasName(link)
+    return Data.ItemName(link) ~= nil
+end
+ns.HasName = HasName
+
+-- A link for an item seen before. Links saved before the game had loaded the item have no name
+-- ("[]"): ask the game again, and ask it to load the item if it doesn't know it yet (a
+-- GET_ITEM_INFO_RECEIVED then redraws the list).
 function ns.ItemLink(key)
-    return ns.db and ns.db.items[key]
+    local saved = ns.db and ns.db.items[key]
+    if HasName(saved) then return saved end
+    local id = Data.KeyItemID(key)
+    if id and not key:find(":", 1, true) and GetInfo then
+        local _, link = GetInfo(id)
+        if HasName(link) then
+            ns.db.items[key] = link
+            return link
+        end
+    end
+    if id and C_Item and C_Item.RequestLoadItemDataByID then pcall(C_Item.RequestLoadItemDataByID, id) end
+    return saved
 end
 
 function ns.ItemIcon(key)
@@ -99,7 +121,8 @@ function ns.ItemQuality(link)
         local q = C_Item.GetItemQualityByID(link)
         if q then return q end
     end
-    local _, _, q = GetItemInfo(link)
+    if not GetInfo then return nil end
+    local _, _, q = GetInfo(link)
     return q
 end
 
@@ -166,7 +189,7 @@ local function ScanContainers(list, location, stacks, empty)
                     quality = quality, bag = bag, slot = slot, bagOrder = order,
                     location = location, where = where,
                 }
-                if key and link and not ns.db.items[key] then ns.db.items[key] = link end
+                if key and HasName(link) and not HasName(ns.db.items[key]) then ns.db.items[key] = link end
             elseif empty then
                 empty[#empty + 1] = { bag = bag, slot = slot, bagOrder = order, location = location, where = where, empty = true, count = 0 }
             end
@@ -261,6 +284,7 @@ local EVENTS = {
     "PLAYERBANKSLOTS_CHANGED",
     "PLAYERBANKBAGSLOTS_CHANGED",
     "GET_ITEM_INFO_RECEIVED",
+    "ITEM_DATA_LOAD_RESULT",
     "PLAYER_MONEY",
     "CURSOR_CHANGED",
     "GAME_PAD_ACTIVE_CHANGED",

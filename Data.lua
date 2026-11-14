@@ -29,7 +29,10 @@ end
 -- The bracketed name inside an item link.
 function Data.ItemName(link)
     if type(link) ~= "string" then return nil end
-    return link:match("|h%[(.-)%]|h") or link:match("%[(.-)%]")
+    local name = link:match("|h%[(.-)%]|h") or link:match("%[(.-)%]")
+    -- "[]": a link made before the game had loaded the item.
+    if name == "" then return nil end
+    return name
 end
 
 -- Characters are grouped by realm, ruleset and faction: alts in the same group are counted together.
