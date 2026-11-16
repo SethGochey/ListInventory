@@ -95,12 +95,14 @@ end
 --   chars    saved records of every character in the group (see Breakdown)
 --   current  the logged-in character's name
 --   stacks   live stacks the player can act on now: { key, link, count, location = "bags"|"bank", bag, slot, bagOrder }
---   view     "bags": only items in `stacks`; "all": every item anyone in the group has
 --   filter   optional lower-case text the item name must contain
 --   itemName function(key) -> name or nil, for items not in `stacks`
 --   itemLink function(key) -> link or nil
--- Each row: { key, name, link, bags, bank, total, stacks = { ... } } where bags/bank are the
--- current character's counts and total covers every character in the group.
+-- Every item anyone in the group has gets a row: { key, name, link, bags, bank, total, section,
+-- stacks = { ... } } where bags/bank are the current character's counts, total covers every
+-- character in the group, and section is "here" for items with stacks to act on (in the bags,
+-- or the bank while it is open) and "elsewhere" for the rest. "here" rows come first; each
+-- section is sorted by name.
 function Data.BuildRows(opts)
     local chars, current = opts.chars or {}, opts.current
     local rowsByKey, rows = {}, {}
@@ -123,12 +125,10 @@ function Data.BuildRows(opts)
         end
     end
 
-    if opts.view == "all" then
-        for _, rec in pairs(chars) do
-            for _, where in ipairs({ "bags", "bank" }) do
-                for key, n in pairs(rec[where] or {}) do
-                    if n > 0 then Row(key) end
-                end
+    for _, rec in pairs(chars) do
+        for _, where in ipairs({ "bags", "bank" }) do
+            for key, n in pairs(rec[where] or {}) do
+                if n > 0 then Row(key) end
             end
         end
     end
@@ -150,6 +150,7 @@ function Data.BuildRows(opts)
         if liveBags > row.bags then total = total + liveBags - row.bags; row.bags = liveBags end
         if liveBank > row.bank then total = total + liveBank - row.bank; row.bank = liveBank end
         row.total = total
+        row.section = #row.stacks > 0 and "here" or "elsewhere"
         table.sort(row.stacks, SortStacks)
         if not filter or row.name:lower():find(filter, 1, true) then
             out[#out + 1] = row
@@ -157,6 +158,7 @@ function Data.BuildRows(opts)
     end
 
     table.sort(out, function(a, b)
+        if a.section ~= b.section then return a.section == "here" end
         local na, nb = a.name:lower(), b.name:lower()
         if na ~= nb then return na < nb end
         return a.key < b.key

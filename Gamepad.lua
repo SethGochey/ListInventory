@@ -206,6 +206,78 @@ function GP:Apply()
     -- The cursor is never moved from here: SmartNavigation flags a cursor move made by addon code
     -- ("Interface action failed"). It needn't be: every bag slot belongs to a row of the list,
     -- so wherever the game puts its cursor, the list follows it (Follow).
+
+    -- Browsing "Elsewhere" across a rebuild: keep the parked slot pinned, if it's still empty.
+    if self.browsing then
+        local key = SlotKey(self.parked)
+        local at = key and self.indexBySlot[key]
+        local e = at and UI.entries[at[1]]
+        if e and e.kind == "empty" and UI.firstElsewhere then
+            self:Pin(self.parked)
+        else
+            self.browsing, self.parked = false, nil
+        end
+    end
+end
+
+---------------------------------------------------------------------------------------------
+-- Browsing "Elsewhere": rows with no bag slot, so the game's cursor can't stand on them. Down
+-- from the Empty slots row parks the cursor on that empty slot (A, X and Y then act on nothing)
+-- and the D-pad moves the list's selection instead, read straight from the pad. Up past the
+-- first Elsewhere row goes back to the bags.
+---------------------------------------------------------------------------------------------
+local REPEAT_DELAY, REPEAT_RATE = 0.35, 0.08
+local pad = {}
+
+-- A press of `key` this tick: just pressed, or held long enough to repeat.
+local function Pressed(key)
+    local st = pad[key]
+    if not st then
+        st = {}
+        pad[key] = st
+    end
+    local down = IsKeyDown and IsKeyDown(key) or false
+    local now = GetTime and GetTime() or 0
+    local fire = false
+    if down and not st.down then
+        fire, st.nextAt = true, now + REPEAT_DELAY
+    elseif down and st.nextAt and now >= st.nextAt then
+        fire, st.nextAt = true, now + REPEAT_RATE
+    end
+    st.down = down
+    return fire
+end
+
+-- The parked slot's cursor moves all point back at itself, so only the list moves.
+function GP:Pin(button)
+    Jump(button, "UP", button)
+    Jump(button, "DOWN", button)
+    Jump(button, "LEFT", button)
+    Jump(button, "RIGHT", button)
+end
+
+function GP:StartBrowsing(button)
+    self.browsing, self.parked, self.returnSel = true, button, UI.sel
+    self:Pin(button)
+    UI.sel = UI.firstElsewhere
+    UI:Render()
+end
+
+function GP:StopBrowsing()
+    if not self.browsing then return end
+    self.browsing, self.parked = false, nil
+    UI.sel = self.returnSel or UI.sel
+    self:Apply() -- the parked slot's usual moves back
+    UI:Render()
+end
+
+function GP:BrowseStep(dir)
+    local i = UI.sel + dir
+    if not UI.firstElsewhere or i < UI.firstElsewhere then return self:StopBrowsing() end
+    if UI.entries[i] then
+        UI.sel = i
+        UI:Render()
+    end
 end
 
 -- From the list's OnUpdate.
@@ -213,6 +285,7 @@ function GP:Tick()
     local holding = GetCursorInfo() ~= nil
     if holding ~= self.holding then
         self.holding = holding
+        if holding then self.browsing, self.parked = false, nil end
         if self:Handover() then
             -- The grid shows and the cursor moves on it as usual; the list steps aside.
             self:Clear()
@@ -235,21 +308,48 @@ function GP:ShowList(on)
     UI.list:SetShown(on)
 end
 
--- The list follows the game's cursor.
+-- The list follows the game's cursor (or, browsing Elsewhere, the D-pad).
 function GP:Follow()
     if not self.chain then return end
     local nav = Nav()
     local ok, current = pcall(nav.GetCurrentButton, nav)
-    local at = ok and self.indexBySlot[SlotKey(current) or ""]
+    local key = ok and SlotKey(current) or nil
+    local down, up = Pressed("PADDDOWN"), Pressed("PADDUP")
+    -- (the slot the cursor was on before this tick: a press that just moved the cursor onto the
+    -- Empty slots row is not yet a press "down from" it)
+    local before = self.before
+    self.before = key
+
+    if self.browsing then
+        if current ~= self.parked then return self:StopBrowsing() end
+        if down then
+            self:BrowseStep(1)
+        elseif up then
+            self:BrowseStep(-1)
+        end
+        return
+    end
+
+    local at = key and self.indexBySlot[key]
     if not at then return end
     if at[1] ~= UI.sel or at[2] ~= self.stackIndex then
         UI.sel, self.stackIndex = at[1], at[2]
         UI:Render()
     end
+    if down and key == before and UI.firstElsewhere then
+        local e = UI.entries[at[1]]
+        local last = self.chain[#self.chain]
+        if e and e.kind == "empty" then
+            self:StartBrowsing(current)
+        elseif last and at[1] == last.index then
+            UI:Flash("Free a bag slot to browse items elsewhere.")
+        end
+    end
 end
 
 -- From UI:Render: the selected row shows which of its stacks the cursor is on.
 function GP:Decorate(row, e, selected)
+    if self.browsing then return end
     if not (selected and self.chain and e.stacks and #e.stacks > 1 and self.stackIndex) then return end
     local s = e.stacks[self.stackIndex]
     if not s then return end
@@ -260,6 +360,8 @@ end
 function GP:Release()
     self:Clear()
     self.retries, self.holding = 0, nil
+    self.browsing, self.parked, self.before = false, nil, nil
+    wipe(pad)
     self.tipHidden = false
     for _, tip in ipairs(self:Tooltips()) do Fade(tip, false) end
     self:ShowList(true)

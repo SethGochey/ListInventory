@@ -6,7 +6,6 @@ ns.defaults = {
     replaceBags = true, -- open the list with the game's bags
     tooltip = true,     -- add counts from all characters to item tooltips
     hideGrid = true,    -- gamepad mode: fade the game's bag window while the list drives its cursor
-    view = "bags",      -- "bags" or "all"
 }
 
 ns.debug = false
@@ -162,6 +161,7 @@ local function LoadDB()
         db.point = nil
         db.layout = 2
     end
+    db.view = nil -- (the Bags / Everything tabs, gone: one list now)
     db.groups = db.groups or {}
     db.items = db.items or {}
     ns.db = db

@@ -34,8 +34,6 @@ UI.KEYS = {
     down = { "PADDDOWN" },
     pageUp = { "PADLTRIGGER" },
     pageDown = { "PADRTRIGGER" },
-    prevView = { "PADLSHOULDER" },
-    nextView = { "PADRSHOULDER" },
     accept = { "PAD1" }, -- as the game's bags: A picks up / places
     back = { "PAD2" },
     use = { "PAD3" },    -- X uses / equips
@@ -108,6 +106,12 @@ local function StackEntry(s, row)
     }
 end
 
+-- The line between the bags and "Elsewhere": drawn, never selected.
+local function DividerEntry(count)
+    return { kind = "divider", key = "divider", name = "Elsewhere: your bank and other characters  |cff888888(" .. count .. ")|r",
+        nameColor = { 1, 0.82, 0 }, a = "", b = "" }
+end
+
 local function EmptyEntry(s)
     return { kind = "stack", key = EMPTY_KEY, stack = s, name = s.where, a = "", b = "", nameColor = { 0.6, 0.6, 0.6 } }
 end
@@ -137,7 +141,6 @@ function UI:BuildEntries()
     end
     local rows = Data.BuildRows({
         chars = ns.group, current = ns.charName, stacks = live.stacks,
-        view = self.mode == "list" and ns.db.view or "bags",
         itemLink = ns.ItemLink,
     })
     local entries = {}
@@ -163,14 +166,28 @@ function UI:BuildEntries()
         self:LeaveStacks()
     end
 
-    for _, row in ipairs(rows) do entries[#entries + 1] = RowEntry(row) end
-    if ns.db.view == "bags" and #live.empty > 0 then
+    -- In your bags (and the bank while it's open), then Empty slots, then everything elsewhere.
+    local elsewhere = {}
+    for _, row in ipairs(rows) do
+        if row.section == "here" then
+            entries[#entries + 1] = RowEntry(row)
+        else
+            elsewhere[#elsewhere + 1] = RowEntry(row)
+        end
+    end
+    if #live.empty > 0 then
         local e = {
             kind = "empty", key = EMPTY_KEY, name = "Empty slots", a = tostring(#live.empty), b = "",
             stacks = live.empty, nameColor = { 0.6, 0.6, 0.6 },
         }
         if #live.empty == 1 then e.stack = live.empty[1] end
         entries[#entries + 1] = e
+    end
+    self.firstElsewhere = nil
+    if #elsewhere > 0 then
+        entries[#entries + 1] = DividerEntry(#elsewhere)
+        self.firstElsewhere = #entries + 1
+        for _, e in ipairs(elsewhere) do entries[#entries + 1] = e end
     end
     self.entries = entries
 end
@@ -280,21 +297,6 @@ local function MakeNavButton(action)
     return b
 end
 
-local function MakeTab(parent, label, view)
-    local tab = CreateFrame("Button", nil, parent)
-    tab:SetSize(110, 20)
-    tab.text = tab:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    tab.text:SetAllPoints()
-    tab.text:SetText(label)
-    tab.underline = tab:CreateTexture(nil, "ARTWORK")
-    tab.underline:SetPoint("BOTTOMLEFT", 10, 0)
-    tab.underline:SetPoint("BOTTOMRIGHT", -10, 0)
-    tab.underline:SetHeight(2)
-    tab.underline:SetColorTexture(1, 0.82, 0, 1)
-    tab:SetScript("OnClick", function() UI:SetView(view) end)
-    return tab
-end
-
 function UI:Init()
     if self.frame then return end
 
@@ -336,13 +338,6 @@ function UI:Init()
     if type(frame.CloseButton) == "table" then frame.CloseButton:SetScript("OnClick", function() UI:Do("close") end) end
     frame.title = frame.TitleText or frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     if not frame.TitleText then frame.title:SetPoint("TOP", 0, -14) end
-
-    self.tabs = {
-        bags = MakeTab(frame, "Bags", "bags"),
-        all = MakeTab(frame, "Everything", "all"),
-    }
-    self.tabs.bags:SetPoint("TOPLEFT", 16, -30)
-    self.tabs.all:SetPoint("LEFT", self.tabs.bags, "RIGHT", 4, 0)
 
     self.heading = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     self.heading:SetPoint("TOPLEFT", 18, -32)
@@ -511,20 +506,14 @@ function UI:Render()
             else
                 row.holder:Hide()
                 row.icon:SetTexture(e.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
-                row.icon:SetShown(e.kind ~= "empty" and e.kind ~= "option")
+                row.icon:SetShown(e.kind ~= "empty" and e.kind ~= "option" and e.kind ~= "divider")
                 row.icon:SetDesaturated(e.row ~= nil and e.row.bags == 0 and e.row.bank == 0)
             end
         end
     end
 
     local inList = self.mode == "list"
-    for view, tab in pairs(self.tabs) do
-        tab:SetShown(inList)
-        tab.underline:SetShown(ns.db.view == view)
-        tab.text:SetFontObject(ns.db.view == view and "GameFontHighlight" or "GameFontDisable")
-    end
-    self.heading:SetShown(not inList)
-    if not inList then self.heading:SetText(self.drillTitle or "") end
+    self.heading:SetText(inList and "In your bags" or (self.drillTitle or ""))
     self.colHeadA:SetText(inList and "Bags" or ((self.mode == "stacks") and "Count" or ""))
     self.colHeadB:SetText(inList and "Total" or "")
 
@@ -542,6 +531,11 @@ end
 function UI:RenderHint()
     if self.message then
         self.hint:SetText(self.message)
+        return
+    end
+    if self.gamepadMode and ns.Gamepad and ns.Gamepad.browsing then
+        self.hint:SetText("|cffaaaaaaD-pad: browse items elsewhere   Up from the top: back to your bags|r   "
+            .. Glyph("PAD2") .. " Close")
         return
     end
     if self.gamepadMode then
@@ -573,7 +567,6 @@ function UI:RenderHint()
         parts[#parts + 1] = Glyph("PAD4") .. " More"
     end
     parts[#parts + 1] = Glyph("PAD2") .. (self.mode == "list" and " Close" or " Back")
-    if self.mode == "list" then parts[#parts + 1] = Glyph("PADLSHOULDER") .. Glyph("PADRSHOULDER") .. " View" end
     self.hint:SetText(table.concat(parts, "   "))
 end
 
@@ -688,6 +681,13 @@ end
 
 function UI:Select(index, fromMouse)
     if index < 1 or index > #self.entries then return end
+    if self.entries[index].kind == "divider" then
+        if fromMouse then return end
+        -- (stepping onto it: one further, the way we were going)
+        local step = index > self.sel and 1 or -1
+        if self.entries[index + step] then return self:Select(index + step) end
+        return
+    end
     if fromMouse and self.mode == "confirm" then return end
     if index == self.sel and fromMouse then return end
     self.sel = index
@@ -696,13 +696,6 @@ end
 
 function UI:Scroll(delta)
     self:Select(math.max(1, math.min(#self.entries, self.sel + delta)))
-end
-
-function UI:SetView(view)
-    if self.mode ~= "list" or ns.db.view == view then return end
-    ns.db.view = view
-    self.sel, self.offset = 1, 0
-    self:Refresh()
 end
 
 function UI:Drill(e)
@@ -732,8 +725,6 @@ function UI:Do(action, fromPad)
         if self.mode ~= "confirm" then self:Select(math.max(1, self.sel - VISIBLE)) end
     elseif action == "pageDown" then
         if self.mode ~= "confirm" then self:Select(math.min(n, self.sel + VISIBLE)) end
-    elseif action == "prevView" or action == "nextView" then
-        self:SetView(ns.db.view == "bags" and "all" or "bags")
     elseif action == "back" then
         if self.mode == "confirm" then
             self.mode, self.confirm = "more", nil

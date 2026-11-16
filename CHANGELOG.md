@@ -1,5 +1,10 @@
 # ListInventory
 
+## Unreleased
+
+- One list instead of the Bags / Everything tabs: your bags first, then Empty slots, then an **Elsewhere** section (your bank and other characters).
+- Gamepad UI: press down on the Empty slots row to browse Elsewhere with the D-pad, and up from its first row to go back.
+
 ## v1.0.0
 
 - **The list replaces the bags.** It opens and closes with the game's bag window however the bags are opened (bag button, LB+RB+B, the Start-button radial menu, vendors, bank, mail) and sits right over it while it's hidden.

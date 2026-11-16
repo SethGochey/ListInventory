@@ -6,7 +6,7 @@ A World of Warcraft: Forever addon that shows your bags as a scrollable list of 
 - **One row per item**, sorted by name, with two counts: how many are in this character's **Bags**, and the **Total** across this character's bank and every alt on the same realm, ruleset and faction. If you're farming Linen Cloth, the Linen row tells you at a glance how much you have everywhere.
 - **Stacks sub-menu.** Selecting an item that's spread over several stacks opens a list of those stacks (bag and slot, count each), so you can pick the exact one.
 - **Everything you can do in the default bags.** Each stack is a real bag slot: use, equip, open, sell to a vendor, put in the bank, trade, mail, pick up, split (Shift-click), link (Shift-click) and destroy.
-- **Two views.** **Bags** shows what you're carrying, plus the bank while it's open. **Everything** also lists items that only your bank or your alts have.
+- **One list.** What you're carrying comes first (plus the bank while it's open), then **Empty slots**, then an **Elsewhere** section with items only your bank or your alts have.
 - **Tooltips everywhere** gain a per-character count: "Total 367 / Main 67 (27 bags, 40 bank) / Alt 100 ...".
 - Free bag slots and your gold are shown at the bottom. An **Empty slots** row lets you put a picked-up item into a particular slot.
 
@@ -26,7 +26,7 @@ The game's bag window stays open but hidden, whichever input you're using, and t
 
 `/li grid` shows the game's bag window again behind the list, handy if something looks wrong.
 
-With the Gamepad UI on, the **Bags** / **Everything** tabs can only be switched with the mouse for now. A single list that a controller can reach end to end is planned (see `docs/plan-unified-list.md`).
+**Elsewhere** items have no bag slot for the game's cursor to stand on, so with the Gamepad UI on: press **down on the Empty slots row** to browse them. The cursor stays parked on that empty slot (so A, X and Y do nothing) while the D-pad moves through the Elsewhere rows, each with its tooltip and per-character counts. Press **up from the first Elsewhere row** to go back to your bags. With full bags there's no empty slot to park on, so free one to browse.
 
 **With the Gamepad UI off**, a controller still works: the list takes it itself, with the same buttons as the game's bags:
 
@@ -34,7 +34,6 @@ With the Gamepad UI on, the **Bags** / **Everything** tabs can only be switched 
 | --- | --- | --- |
 | D-pad up/down | Move (hold to repeat) | Move |
 | LT / RT | Page up / down | Page up / down |
-| LB / RB | Switch Bags / Everything | – |
 | A | Open the stacks sub-menu, or pick up a single stack. Holding an item: put it there | Pick up the stack, or put the held item there |
 | X | Use or equip a single stack | Use or equip the stack |
 | Y | More menu: Destroy (asks first), Link in chat | More menu |

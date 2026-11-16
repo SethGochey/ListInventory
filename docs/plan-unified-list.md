@@ -1,6 +1,6 @@
 # Plan: one list instead of the Bags / Everything tabs
 
-Status: planned for after 1.0, on its own feature branch.
+Status: built on `feature/unified-list` (after 1.0). Both open questions were settled as proposed: Elsewhere starts expanded, and this character's bank counts as Elsewhere while the bank window is closed.
 
 ## Problem
 
